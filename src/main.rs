@@ -9,9 +9,10 @@ mod database {
         str::FromStr,
     };
 
+    #[derive(Debug)]
     pub struct DataBase {
-        pub file_name: PathBuf,
-        pub items: Vec<Item>,
+        file_name: PathBuf,
+        items: Vec<Item>,
     }
 
     impl DataBase {
@@ -28,9 +29,11 @@ mod database {
             let items = reader
                 .lines()
                 .map_while(Result::ok)
-                .flat_map(|x| x.parse::<Item>())
-                .collect::<Vec<Item>>()
+                .map(|x| x.parse::<Item>())
+                .collect::<Result<Vec<Item>,InvalidItem>>()
+                .ok()?
             ;
+
             Some(DataBase {
                 file_name: file_path.into(),
                 items,
@@ -39,6 +42,7 @@ mod database {
     }
 
     #[derive(Debug)]
+    // TODO: Consider removing the id
     pub struct Item {
         id: u32,
         project: String,
@@ -56,10 +60,7 @@ mod database {
                 value.id,
                 value.project,
                 value.description,
-                value.complete // match value.complete {
-                               //     true => "✔️",
-                               //     false => "✔️",
-                               // }
+                value.complete,
             )
         }
     }
@@ -102,11 +103,8 @@ mod database {
 fn main() {
     let file_name = Path::new("./database");
     // let database = DataBase::read(file_name).expect("File not found");
-    let database = DataBase::read(file_name).unwrap();
-    dbg!(database.file_name);
-    for item in database.items {
-        dbg!(item);
-    }
+    let database = DataBase::read(file_name);
+    dbg!(database);
 }
 
 // #[cfg(test)]
