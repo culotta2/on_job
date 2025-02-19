@@ -1,17 +1,80 @@
-use database::DataBase;
+use crate::database::DataBase;
 use std::path::Path;
+use std::env;
+
+#[derive(Debug)]
+enum Commands {
+    AddItem{project: String, description: String},
+    CompleteItem(u32),
+    DeleteItem(u32),
+    // TODO: Add function as predicate for filtering?
+    ShowItems,
+}
+
+#[derive(Clone, Debug)]
+enum CommandErrors{
+    IdParseError,
+    InvalidCommand,
+    MissingArgument,
+}
+
+impl std::error::Error for CommandErrors {}
+
+impl std::fmt::Display for CommandErrors {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IdParseError => write!(f, "IdParseError - Input could not be converted to a valid u32"),
+            Self::InvalidCommand => write!(f, "InvalidCommand - The supplied argument is not a supported command"),
+            Self::MissingArgument => write!(f, "MissingArgument - An argument was not found"),
+        }
+    }
+}
+
+impl Commands {
+    fn new(cmd: &str, args: &mut std::env::Args) -> Result<Self, CommandErrors> {
+        match cmd {
+            "add" => Ok(Self::AddItem {
+                project: args.next().ok_or(CommandErrors::MissingArgument {})?,
+                description: args.next().ok_or(CommandErrors::MissingArgument {})?
+            }),
+            "complete" => Ok(Self::CompleteItem(args
+                .next()
+                .ok_or(CommandErrors::MissingArgument {})?
+                .parse::<u32>()
+                .ok()
+                .ok_or(CommandErrors::IdParseError {})?)),
+            "delete" => Ok(Self::DeleteItem(args
+                .next()
+                .ok_or(CommandErrors::MissingArgument {})?
+                .parse::<u32>()
+                .ok()
+                .ok_or(CommandErrors::IdParseError {})?)),
+            "show" => Ok(Self::ShowItems),
+            _ => Err(CommandErrors::InvalidCommand),
+        }
+    }
+
+    fn do_command(self, database: &mut DataBase) {
+        match self {
+            Self::AddItem {project, description} => database.add_item(project, description),
+            Self::CompleteItem(id) => database.complete_item(id),
+            Self::DeleteItem(id) => database.delete_item(id),
+            Self::ShowItems => todo!(),
+        };
+    }
+}
 
 mod database {
     use std::{
         fs::File,
-        io::{BufRead, BufReader, BufWriter, Write},
+        io::{BufRead, BufReader},
         path::{Path, PathBuf},
         str::FromStr,
     };
 
     #[derive(Debug)]
     pub struct DataBase {
-        file_name: PathBuf,
+        file_path: PathBuf,
         items: Vec<Item>,
     }
 
@@ -35,14 +98,44 @@ mod database {
             ;
 
             Some(DataBase {
-                file_name: file_path.into(),
+                file_path: file_path.into(),
                 items,
             })
         }
+
+        pub fn add_item(&mut self, project: String, description: String) {
+            self.items.push(Item {
+                id: self.get_max_id() + 1,
+                project,
+                description,
+                complete: false,
+            });
+        }
+
+        pub fn complete_item(&mut self, id: u32) {
+            self.items
+                .iter_mut()
+                .filter(|item| item.id == id)
+                .for_each(|item| item.complete = true)
+            ;
+        }
+
+        pub fn delete_item(&mut self, id: u32) {
+            self.items
+                .retain_mut(|x| x.id != id)
+        }
+
+        pub fn get_max_id(&self) -> u32 {
+            self.items
+                .iter()
+                .map(|x| x.id)
+                .max()
+                .unwrap_or(0)
+        }
+
     }
 
     #[derive(Debug)]
-    // TODO: Consider removing the id
     pub struct Item {
         id: u32,
         project: String,
@@ -101,11 +194,17 @@ mod database {
 }
 
 fn main() {
+    let mut args = env::args();
+    let cmd = Commands::new(&args.nth(1).expect("Need a command"), &mut args);
+    dbg!(&cmd);
     let file_name = Path::new("./database");
-    // let database = DataBase::read(file_name).expect("File not found");
-    let database = DataBase::read(file_name);
-    dbg!(database);
+    let mut database = DataBase::read(file_name).unwrap();
+    dbg!(&database);
+    cmd.unwrap().do_command(&mut database);
+    dbg!(&database);
 }
+
+
 
 // #[cfg(test)]
 // mod tests {
