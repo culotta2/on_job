@@ -8,7 +8,7 @@ enum Commands {
     CompleteItem(u32),
     DeleteItem(u32),
     // TODO: Add function as predicate for filtering?
-    ShowItems,
+    ListItems,
 }
 
 #[derive(Clone, Debug)]
@@ -49,7 +49,7 @@ impl Commands {
                 .parse::<u32>()
                 .ok()
                 .ok_or(CommandErrors::IdParseError {})?)),
-            "show" => Ok(Self::ShowItems),
+            "list" => Ok(Self::ListItems),
             _ => Err(CommandErrors::InvalidCommand),
         }
     }
@@ -59,7 +59,7 @@ impl Commands {
             Self::AddItem {project, description} => database.add_item(project, description),
             Self::CompleteItem(id) => database.complete_item(id),
             Self::DeleteItem(id) => database.delete_item(id),
-            Self::ShowItems => todo!(),
+            Self::ListItems => database.list_items(),
         };
     }
 }
@@ -133,6 +133,13 @@ mod database {
                 .unwrap_or(0)
         }
 
+        pub fn list_items(&self) {
+            self.items
+                .iter()
+                .for_each(|item| println!("{item}"))
+            ;
+        }
+
     }
 
     #[derive(Debug)]
@@ -142,6 +149,19 @@ mod database {
         description: String,
         complete: bool,
         // time_initialized: Time,
+    }
+
+    impl std::fmt::Display for Item {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f,
+                // TODO: Make padding dynamic
+                "| {:>2} | {:>10} | {:>20} | {:>5} |",
+                self.id,
+                self.project,
+                self.description,
+                self.complete,
+            )
+        }
     }
 
     pub struct InvalidItem {}
@@ -195,7 +215,9 @@ mod database {
 
 fn main() {
     let mut args = env::args();
-    let cmd = Commands::new(&args.nth(1).expect("Need a command"), &mut args);
+    let cmd = Commands::new(&args.nth(1).expect(
+        "Need a command - one of: add, complete, delete, or list"
+    ), &mut args);
     dbg!(&cmd);
     let file_name = Path::new("./database");
     let mut database = DataBase::read(file_name).unwrap();
