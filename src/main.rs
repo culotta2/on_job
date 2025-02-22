@@ -60,7 +60,7 @@ mod database {
         str::FromStr,
     };
 
-    #[derive(Debug)]
+    #[derive(Debug, Default, PartialEq, Eq)]
     pub struct DataBase {
         pub file_path: PathBuf,
         pub items: Vec<Item>,
@@ -93,7 +93,7 @@ mod database {
 
         pub fn add_item(&mut self, project: String, description: String) {
             self.items.push(Item {
-                id: self.get_max_id() + 1,
+                id: self.get_max_id().map(|v| v + 1).unwrap_or(0),
                 project,
                 description,
                 complete: false,
@@ -113,12 +113,11 @@ mod database {
                 .retain_mut(|x| x.id != id)
         }
 
-        pub fn get_max_id(&self) -> u32 {
+        pub fn get_max_id(&self) -> Option<u32> {
             self.items
                 .iter()
                 .map(|x| x.id)
                 .max()
-                .unwrap_or(0)
         }
 
         pub fn list_items(&self) {
@@ -134,13 +133,19 @@ mod database {
 
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Default, PartialEq, Eq)]
     pub struct Item {
         id: u32,
         project: String,
         description: String,
         complete: bool,
         // time_initialized: Time,
+    }
+
+    impl Item {
+        pub fn new(id: u32, project: String, description: String, complete: bool) -> Self {
+            Item { id, project, description, complete }
+        }
     }
 
     impl std::fmt::Display for Item {
@@ -237,10 +242,18 @@ fn main() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use crate::Item;
-//
-//     #[test]
-//     fn it_works() {}
-// };
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::database::Item;
+    #[test]
+    fn test_database_add() {
+        let mut result_db = DataBase::default();
+        let expected_db = DataBase { 
+            file_path: "".into(),
+            items: vec![Item::new(0, "Project Time".into(), "Top tier description".into(), false)],
+        };
+        result_db.add_item("Project Time".into(), "Top tier description".into());
+        assert_eq!(expected_db, result_db);
+    }
+}
