@@ -247,13 +247,99 @@ mod tests {
     use super::*;
     use crate::database::Item;
     #[test]
-    fn test_database_add() {
+    fn test_database_add_to_empty_database() {
         let mut result_db = DataBase::default();
-        let expected_db = DataBase { 
+        let expected_db = DataBase {
             file_path: "".into(),
             items: vec![Item::new(0, "Project Time".into(), "Top tier description".into(), false)],
         };
         result_db.add_item("Project Time".into(), "Top tier description".into());
+        assert_eq!(expected_db, result_db);
+    }
+
+    #[test]
+    fn test_database_add_to_database() {
+        let mut result_db = DataBase {
+            file_path: "".into(),
+            items: vec![
+                Item::new(0, "Project 1".into(), "First task".into(), true),
+                Item::new(1, "Project 1".into(), "Second task".into(), false),
+                Item::new(2, "Project 2".into(), "New project task".into(), true),
+            ],
+        };
+        let expected_db = DataBase {
+            file_path: "".into(),
+            items: vec![
+                Item::new(0, "Project 1".into(), "First task".into(), true),
+                Item::new(1, "Project 1".into(), "Second task".into(), false),
+                Item::new(2, "Project 2".into(), "New project task".into(), true),
+                Item::new(3, "Project 1".into(), "Same old same old".into(), false),
+            ],
+        };
+        result_db.add_item("Project 1".into(), "Same old same old".into());
+        assert_eq!(expected_db, result_db);
+    }
+
+    #[test]
+    fn test_database_complete_item_empty_database() {
+        let expected_db = DataBase::default();
+        let mut result_db = DataBase::default();
+        result_db.complete_item(100);
+        assert_eq!(expected_db, result_db);
+    }
+
+    #[test]
+    fn test_database_complete_item() {
+        let expected_db = DataBase {
+            file_path: "".into(),
+            items: vec![
+                Item::new(0, "Project 1".into(), "First task".into(), true),
+                Item::new(1, "Project 1".into(), "Second task".into(), false),
+                Item::new(2, "Project 2".into(), "New project task".into(), true),
+                Item::new(3, "Project 1".into(), "Same old same old".into(), false),
+            ],
+        };
+        let mut result_db = DataBase {
+            file_path: "".into(),
+            items: vec![
+                Item::new(0, "Project 1".into(), "First task".into(), true),
+                Item::new(1, "Project 1".into(), "Second task".into(), false),
+                Item::new(2, "Project 2".into(), "New project task".into(), false),
+                Item::new(3, "Project 1".into(), "Same old same old".into(), false),
+            ],
+        };
+        result_db.complete_item(2);
+        assert_eq!(expected_db, result_db);
+    }
+
+    #[test]
+    fn test_database_delete_item_empty_database() {
+        let expected_db = DataBase::default();
+        let mut result_db = DataBase::default();
+        result_db.delete_item(100);
+        assert_eq!(expected_db, result_db);
+    }
+
+    #[test]
+    fn test_database_delete_item() {
+        let expected_db = DataBase {
+            file_path: "".into(),
+            items: vec![
+                Item::new(0, "Project 1".into(), "First task".into(), true),
+                Item::new(1, "Project 1".into(), "Second task".into(), false),
+                Item::new(3, "Project 1".into(), "Same old same old".into(), false),
+            ],
+        };
+        let mut result_db = DataBase {
+            file_path: "".into(),
+            items: vec![
+                Item::new(0, "Project 1".into(), "First task".into(), true),
+                Item::new(1, "Project 1".into(), "Second task".into(), false),
+                Item::new(2, "Project 2".into(), "New project task".into(), true),
+                Item::new(3, "Project 1".into(), "Same old same old".into(), false),
+            ],
+        };
+        result_db.delete_item(2);
         assert_eq!(expected_db, result_db);
     }
 }
