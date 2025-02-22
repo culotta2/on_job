@@ -1,68 +1,56 @@
 use crate::database::DataBase;
-use std::path::Path;
-use std::env;
+use std::{fs::OpenOptions, path::Path};
+use std::io::prelude::*;
+use clap::Parser;
 
-#[derive(Debug)]
+#[derive(Debug, Parser)]
+#[command(
+    author="Dominic Culotta",
+    version="0.1.0",
+    about="A todo CLI application",
+    long_about = None
+)]
+struct Args {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(clap::Args, Debug)]
+struct AddItemArgs {
+    #[arg(short, long)]
+    /// Name of project
+    project: String,
+    #[arg(short, long)]
+    /// Description of task
+    description: String,
+}
+
+#[derive(clap::Args, Debug)]
+struct CompleteItemArgs {
+    #[arg(short, long)]
+    /// id of task to complete
+    id: u32,
+}
+
+#[derive(clap::Args, Debug)]
+struct DeleteItemArgs {
+    #[arg(short, long)]
+    /// id of task to delete
+    id: u32,
+}
+
+#[derive(Debug, clap::Subcommand)]
 enum Commands {
-    AddItem{project: String, description: String},
-    CompleteItem(u32),
-    DeleteItem(u32),
-    // TODO: Add function as predicate for filtering?
+    #[command(name="add", about="Adds a new task to a project")]
+    AddItem(AddItemArgs),
+    #[command(name="complete", about="Marks an existing task as finished")]
+    CompleteItem(CompleteItemArgs),
+    #[command(name="delete", about="Removes a task")]
+    DeleteItem(DeleteItemArgs),
+    #[command(name="list", about="Shows all tasks")]
     ListItems,
 }
 
-#[derive(Clone, Debug)]
-enum CommandErrors{
-    IdParseError,
-    InvalidCommand,
-    MissingArgument,
-}
-
-impl std::error::Error for CommandErrors {}
-
-impl std::fmt::Display for CommandErrors {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IdParseError => write!(f, "IdParseError - Input could not be converted to a valid u32"),
-            Self::InvalidCommand => write!(f, "InvalidCommand - The supplied argument is not a supported command"),
-            Self::MissingArgument => write!(f, "MissingArgument - An argument was not found"),
-        }
-    }
-}
-
-impl Commands {
-    fn new(cmd: &str, args: &mut std::env::Args) -> Result<Self, CommandErrors> {
-        match cmd {
-            "add" => Ok(Self::AddItem {
-                project: args.next().ok_or(CommandErrors::MissingArgument {})?,
-                description: args.next().ok_or(CommandErrors::MissingArgument {})?
-            }),
-            "complete" => Ok(Self::CompleteItem(args
-                .next()
-                .ok_or(CommandErrors::MissingArgument {})?
-                .parse::<u32>()
-                .ok()
-                .ok_or(CommandErrors::IdParseError {})?)),
-            "delete" => Ok(Self::DeleteItem(args
-                .next()
-                .ok_or(CommandErrors::MissingArgument {})?
-                .parse::<u32>()
-                .ok()
-                .ok_or(CommandErrors::IdParseError {})?)),
-            "list" => Ok(Self::ListItems),
-            _ => Err(CommandErrors::InvalidCommand),
-        }
-    }
-
-    fn do_command(self, database: &mut DataBase) {
-        match self {
-            Self::AddItem {project, description} => database.add_item(project, description),
-            Self::CompleteItem(id) => database.complete_item(id),
-            Self::DeleteItem(id) => database.delete_item(id),
-            Self::ListItems => database.list_items(),
-        };
-    }
-}
 
 mod database {
     use std::{
@@ -74,8 +62,8 @@ mod database {
 
     #[derive(Debug)]
     pub struct DataBase {
-        file_path: PathBuf,
-        items: Vec<Item>,
+        pub file_path: PathBuf,
+        pub items: Vec<Item>,
     }
 
     impl DataBase {
@@ -134,6 +122,10 @@ mod database {
         }
 
         pub fn list_items(&self) {
+            // TODO: Format header to be pretty
+            println!("| --- | ---------- | -------------------- | -------- |");
+            println!("| ID  | Project    | Description          | Complete |");
+            println!("| --- | ---------- | -------------------- | -------- |");
             self.items
                 .iter()
                 .for_each(|item| println!("{item}"))
@@ -155,7 +147,7 @@ mod database {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f,
                 // TODO: Make padding dynamic
-                "| {:>2} | {:>10} | {:>20} | {:>5} |",
+                "| {:<3} | {:<10} | {:<20} | {:<8} |",
                 self.id,
                 self.project,
                 self.description,
@@ -213,20 +205,37 @@ mod database {
     }
 }
 
-fn main() {
-    let mut args = env::args();
-    let cmd = Commands::new(&args.nth(1).expect(
-        "Need a command - one of: add, complete, delete, or list"
-    ), &mut args);
-    dbg!(&cmd);
-    let file_name = Path::new("./database");
-    let mut database = DataBase::read(file_name).unwrap();
-    dbg!(&database);
-    cmd.unwrap().do_command(&mut database);
-    dbg!(&database);
+fn write_database_to_file(database: DataBase) -> Result<(), std::io::Error> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&database.file_path)
+    ?;
+
+    for item in database.items {
+        writeln!(file, "{}", String::from(item))?;
+    };
+
+    Ok(())
 }
 
+fn main() -> Result<(), std::io::Error> {
+    let file_name = Path::new("./database");
+    let mut database = DataBase::read(file_name).unwrap();
+    let args = Args::parse();
 
+    match args.command {
+        Commands::AddItem(add_item_args) => database.add_item(add_item_args.project, add_item_args.description),
+        Commands::CompleteItem(complete_item_args) => database.complete_item(complete_item_args.id),
+        Commands::DeleteItem(delete_item_args) => database.delete_item(delete_item_args.id),
+        Commands::ListItems => database.list_items(),
+    }
+
+    write_database_to_file(database)?;
+
+    Ok(())
+}
 
 // #[cfg(test)]
 // mod tests {
@@ -234,4 +243,4 @@ fn main() {
 //
 //     #[test]
 //     fn it_works() {}
-// }
+// };
