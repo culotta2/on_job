@@ -27,14 +27,14 @@ struct AddItemArgs {
 
 #[derive(clap::Args, Debug)]
 struct CompleteItemArgs {
-    #[arg(short, long)]
+    #[arg(value_parser)]
     /// id of task to complete
     id: u32,
 }
 
 #[derive(clap::Args, Debug)]
 struct DeleteItemArgs {
-    #[arg(short, long)]
+    #[arg(value_parser)]
     /// id of task to delete
     id: u32,
 }
