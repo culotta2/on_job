@@ -133,6 +133,22 @@ mod database {
 
     }
 
+    impl FromStr for DataBase {
+        type Err = InvalidItem;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            Ok(
+                DataBase {
+                    file_path: PathBuf::new(),
+                    items: s
+                        .lines()
+                        .map(|line| line.parse())
+                        .collect::<Result<Vec<Item>, InvalidItem>>()?
+                }
+            )
+        }
+    }
+
     #[derive(Debug, Default, PartialEq, Eq)]
     pub struct Item {
         id: u32,
@@ -161,6 +177,7 @@ mod database {
         }
     }
 
+    #[derive(Debug)]
     pub struct InvalidItem {}
 
     impl From<Item> for String {
@@ -180,6 +197,7 @@ mod database {
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             let vals: Vec<_> = s
+                .trim()
                 .trim_matches('|')
                 .trim()
                 .split("|")
@@ -340,6 +358,22 @@ mod tests {
             ],
         };
         result_db.delete_item(2);
+        assert_eq!(expected_db, result_db);
+    }
+
+    #[test]
+    fn test_create_database_from_string() {
+        let test_str = "| 0 | Project 1 | Doing my job | true |\n | 1 | Project 1 | Job time | true |\n | 2 | Project 2 | What time is it? | true |\n | 3 | Project 3 | Time for job | false |";
+        let expected_db = DataBase {
+            file_path: std::path::PathBuf::new(),
+            items: vec![
+                Item::new(0, "Project 1".into(), "Doing my job".into(), true),
+                Item::new(1, "Project 1".into(), "Job time".into(), true),
+                Item::new(2, "Project 2".into(), "What time is it?".into(), true),
+                Item::new(3, "Project 3".into(), "Time for job".into(), false),
+            ],
+        };
+        let result_db: DataBase = test_str.parse().expect("Did not parse successfully");
         assert_eq!(expected_db, result_db);
     }
 }
