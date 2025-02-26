@@ -1,7 +1,8 @@
 use crate::database::DataBase;
-use std::{fs::OpenOptions, path::Path};
-use std::io::prelude::*;
 use clap::Parser;
+use std::fs::OpenOptions;
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -13,6 +14,8 @@ use clap::Parser;
 struct Args {
     #[command(subcommand)]
     command: Commands,
+    #[arg(short, long)]
+    file: Option<PathBuf>,
 }
 
 #[derive(clap::Args, Debug)]
@@ -41,36 +44,31 @@ struct DeleteItemArgs {
 
 #[derive(Debug, clap::Subcommand)]
 enum Commands {
-    #[command(name="add", about="Adds a new task to a project")]
+    #[command(name = "add", about = "Adds a new task to a project")]
     AddItem(AddItemArgs),
-    #[command(name="complete", about="Marks an existing task as finished")]
+    #[command(name = "complete", about = "Marks an existing task as finished")]
     CompleteItem(CompleteItemArgs),
-    #[command(name="delete", about="Removes a task")]
+    #[command(name = "delete", about = "Removes a task")]
     DeleteItem(DeleteItemArgs),
-    #[command(name="list", about="Shows all tasks")]
+    #[command(name = "list", about = "Shows all tasks")]
     ListItems,
 }
-
 
 mod database {
     use std::{
         fs::File,
         io::{BufRead, BufReader},
-        path::{Path, PathBuf},
+        path::Path,
         str::FromStr,
     };
 
     #[derive(Debug, Default, PartialEq, Eq)]
     pub struct DataBase {
-        pub file_path: PathBuf,
         pub items: Vec<Item>,
     }
 
     impl DataBase {
-        // TODO: Make database work with standard input
-        // - generalize the input that database can take
-        // will make for a more flexible CLI tool
-        pub fn read(file_path: &Path) -> Option<Self> {
+        pub fn from_file(file_path: &Path) -> Option<Self> {
             let file = match file_path.exists() {
                 true => File::open(file_path),
                 false => File::create_new(file_path),
@@ -81,14 +79,10 @@ mod database {
                 .lines()
                 .map_while(Result::ok)
                 .map(|x| x.parse::<Item>())
-                .collect::<Result<Vec<Item>,InvalidItem>>()
-                .ok()?
-            ;
+                .collect::<Result<Vec<Item>, InvalidItem>>()
+                .ok()?;
 
-            Some(DataBase {
-                file_path: file_path.into(),
-                items,
-            })
+            Some(DataBase { items })
         }
 
         pub fn add_item(&mut self, project: String, description: String) {
@@ -104,20 +98,15 @@ mod database {
             self.items
                 .iter_mut()
                 .filter(|item| item.id == id)
-                .for_each(|item| item.complete = true)
-            ;
+                .for_each(|item| item.complete = true);
         }
 
         pub fn delete_item(&mut self, id: u32) {
-            self.items
-                .retain_mut(|x| x.id != id)
+            self.items.retain_mut(|x| x.id != id)
         }
 
         pub fn get_max_id(&self) -> Option<u32> {
-            self.items
-                .iter()
-                .map(|x| x.id)
-                .max()
+            self.items.iter().map(|x| x.id).max()
         }
 
         pub fn list_items(&self) {
@@ -125,27 +114,20 @@ mod database {
             println!("| --- | ---------- | -------------------- | -------- |");
             println!("| ID  | Project    | Description          | Complete |");
             println!("| --- | ---------- | -------------------- | -------- |");
-            self.items
-                .iter()
-                .for_each(|item| println!("{item}"))
-            ;
+            self.items.iter().for_each(|item| println!("{item}"));
         }
-
     }
 
     impl FromStr for DataBase {
         type Err = InvalidItem;
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
-            Ok(
-                DataBase {
-                    file_path: PathBuf::new(),
-                    items: s
-                        .lines()
-                        .map(|line| line.parse())
-                        .collect::<Result<Vec<Item>, InvalidItem>>()?
-                }
-            )
+            Ok(DataBase {
+                items: s
+                    .lines()
+                    .map(|line| line.parse())
+                    .collect::<Result<Vec<Item>, InvalidItem>>()?,
+            })
         }
     }
 
@@ -160,19 +142,22 @@ mod database {
 
     impl Item {
         pub fn new(id: u32, project: String, description: String, complete: bool) -> Self {
-            Item { id, project, description, complete }
+            Item {
+                id,
+                project,
+                description,
+                complete,
+            }
         }
     }
 
     impl std::fmt::Display for Item {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f,
+            write!(
+                f,
                 // TODO: Make padding dynamic
                 "| {:<3} | {:<10} | {:<20} | {:<8} |",
-                self.id,
-                self.project,
-                self.description,
-                self.complete,
+                self.id, self.project, self.description, self.complete,
             )
         }
     }
@@ -184,10 +169,7 @@ mod database {
         fn from(value: Item) -> Self {
             format!(
                 "| {} | {} | {} | {} |",
-                value.id,
-                value.project,
-                value.description,
-                value.complete,
+                value.id, value.project, value.description, value.complete,
             )
         }
     }
@@ -228,34 +210,38 @@ mod database {
     }
 }
 
-fn write_database_to_file(database: DataBase) -> Result<(), std::io::Error> {
+fn write_database_to_file(database: DataBase, file_path: &Path) -> Result<(), std::io::Error> {
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
-        .open(&database.file_path)
-    ?;
+        .open(file_path)?;
 
     for item in database.items {
         writeln!(file, "{}", String::from(item))?;
-    };
+    }
 
     Ok(())
 }
 
 fn main() -> Result<(), std::io::Error> {
-    let file_name = Path::new("./database");
-    let mut database = DataBase::read(file_name).unwrap();
+    // TODO: Make this read from env
+    const DEFAULT_FILE: &str = "./database";
+    let default_path = PathBuf::from(DEFAULT_FILE);
     let args = Args::parse();
+    let file_path = args.file.as_ref().unwrap_or(&default_path);
+    let mut database = DataBase::from_file(file_path).unwrap();
 
     match args.command {
-        Commands::AddItem(add_item_args) => database.add_item(add_item_args.project, add_item_args.description),
+        Commands::AddItem(add_item_args) => {
+            database.add_item(add_item_args.project, add_item_args.description)
+        }
         Commands::CompleteItem(complete_item_args) => database.complete_item(complete_item_args.id),
         Commands::DeleteItem(delete_item_args) => database.delete_item(delete_item_args.id),
         Commands::ListItems => database.list_items(),
     }
 
-    write_database_to_file(database)?;
+    write_database_to_file(database, file_path)?;
 
     Ok(())
 }
@@ -268,8 +254,12 @@ mod tests {
     fn test_database_add_to_empty_database() {
         let mut result_db = DataBase::default();
         let expected_db = DataBase {
-            file_path: "".into(),
-            items: vec![Item::new(0, "Project Time".into(), "Top tier description".into(), false)],
+            items: vec![Item::new(
+                0,
+                "Project Time".into(),
+                "Top tier description".into(),
+                false,
+            )],
         };
         result_db.add_item("Project Time".into(), "Top tier description".into());
         assert_eq!(expected_db, result_db);
@@ -278,7 +268,6 @@ mod tests {
     #[test]
     fn test_database_add_to_database() {
         let mut result_db = DataBase {
-            file_path: "".into(),
             items: vec![
                 Item::new(0, "Project 1".into(), "First task".into(), true),
                 Item::new(1, "Project 1".into(), "Second task".into(), false),
@@ -286,7 +275,6 @@ mod tests {
             ],
         };
         let expected_db = DataBase {
-            file_path: "".into(),
             items: vec![
                 Item::new(0, "Project 1".into(), "First task".into(), true),
                 Item::new(1, "Project 1".into(), "Second task".into(), false),
@@ -309,7 +297,6 @@ mod tests {
     #[test]
     fn test_database_complete_item() {
         let expected_db = DataBase {
-            file_path: "".into(),
             items: vec![
                 Item::new(0, "Project 1".into(), "First task".into(), true),
                 Item::new(1, "Project 1".into(), "Second task".into(), false),
@@ -318,7 +305,6 @@ mod tests {
             ],
         };
         let mut result_db = DataBase {
-            file_path: "".into(),
             items: vec![
                 Item::new(0, "Project 1".into(), "First task".into(), true),
                 Item::new(1, "Project 1".into(), "Second task".into(), false),
@@ -341,7 +327,6 @@ mod tests {
     #[test]
     fn test_database_delete_item() {
         let expected_db = DataBase {
-            file_path: "".into(),
             items: vec![
                 Item::new(0, "Project 1".into(), "First task".into(), true),
                 Item::new(1, "Project 1".into(), "Second task".into(), false),
@@ -349,7 +334,6 @@ mod tests {
             ],
         };
         let mut result_db = DataBase {
-            file_path: "".into(),
             items: vec![
                 Item::new(0, "Project 1".into(), "First task".into(), true),
                 Item::new(1, "Project 1".into(), "Second task".into(), false),
@@ -365,7 +349,6 @@ mod tests {
     fn test_create_database_from_string() {
         let test_str = "| 0 | Project 1 | Doing my job | true |\n | 1 | Project 1 | Job time | true |\n | 2 | Project 2 | What time is it? | true |\n | 3 | Project 3 | Time for job | false |";
         let expected_db = DataBase {
-            file_path: std::path::PathBuf::new(),
             items: vec![
                 Item::new(0, "Project 1".into(), "Doing my job".into(), true),
                 Item::new(1, "Project 1".into(), "Job time".into(), true),
