@@ -36,7 +36,7 @@ on_job add --project "My Client" --description "Do my job"
 ```
 
 ```bash
-on_job "Other client" -d "Do my other job"
+on_job add "Other client" -d "Do my other job"
 ```
 
 #### complete
