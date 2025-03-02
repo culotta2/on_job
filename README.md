@@ -21,23 +21,30 @@ Prints version information
 #### add
 Creates a new, incomplete task
 ```bash
-on_job add --project <PROJECT> --description <DESCRIPTION>
+on_job add --name <NAME> --tags <TAG> [<TAG> ...]
 ```
 ##### Options
-- `-p, --project <PROJECT>`
-The name of the project (category) to which to assign this task (Required)
+- `-n --name <NAME>`
+The name/description of the task (Required)
 
-- `-d, --description <DESCRIPTION>`
-A description of the task (Required)
+- `-t --tags <TAG> [<TAG> ...]`
+Tags categorizing the task (Optional)
 
 ##### Examples
 ```bash
-on_job add --project "My Client" --description "Do my job"
+on_job add --name "Shuffle papers around" --tags "Busy work"
 ```
+Adds one task with one tag
 
 ```bash
-on_job add "Other client" -d "Do my other job"
+on_job add -n "Pickup Coffee"
 ```
+Adds one task without a tag
+
+```bash
+on_job add -n "Meet with client" -t "External" "High stakes"
+```
+Adds one task with multiple tags
 
 #### complete
 Marks a preexisting task as finished
@@ -82,14 +89,13 @@ Shows all tasks
 on_job list
 ```
 
-
 ## Roadmap
-- [ ] Change project/description format to name/tags format
+- [x] Change project/description format to name/tags format
 - [ ] Change default file to use environment variable
 - [ ] Additional storage options
     - [x] Local text file (delimited by ` | `)
     - [ ] sqlite database
-- [ ] Add time information to tasks
+- [ ] Add time (deadline) information to tasks
     - [ ] Specify this in the following ways
         - [ ] absolute time (14:00)
         - [ ] relative time (1hr)
