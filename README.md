@@ -7,8 +7,6 @@ You can add, complete, delete, and list your tasks. Tasks are stored in a local 
 ```bash
 on_job [OPTIONS] <COMMAND>
 ```
-> **_NOTE:_** `on_job` is aliased to `oj` in subsequent examples
-
 ### Options
 - `-f --file <FILE>`
 Specify the database file path. By default, a file called `database` is used in the current directory (*TO BE CHANGED*)
@@ -23,7 +21,7 @@ Prints version information
 #### add
 Creates a new, incomplete task
 ```bash
-oj add --project <PROJECT> --description <DESCRIPTION>
+on_job add --project <PROJECT> --description <DESCRIPTION>
 ```
 ##### Options
 - `-p, --project <PROJECT>`
@@ -34,17 +32,17 @@ A description of the task (Required)
 
 ##### Examples
 ```bash
-oj add --project "My Client" --description "Do my job"
+on_job add --project "My Client" --description "Do my job"
 ```
 
 ```bash
-oj add -p "Other client" -d "Do my other job"
+on_job "Other client" -d "Do my other job"
 ```
 
 #### complete
 Marks a preexisting task as finished
 ```bash
-oj complete <ID>
+on_job complete <ID>
 ```
 ##### Options
 - `<ID>`
@@ -53,7 +51,7 @@ The unique identifier for the task to be completed (Required)
 
 ##### Examples
 ```bash
-oj complete 42
+on_job complete 42
 ```
 The task with id 42 is marked as complete
 - If task 42 is already marked complete, it replaces the `true` with the same value
@@ -63,7 +61,7 @@ The task with id 42 is marked as complete
 #### delete
 Removes a preexisting task from the task list
 ```bash
-oj delete <ID>
+on_job delete <ID>
 ```
 ##### Options
 - `<ID>`
@@ -72,7 +70,7 @@ The unique identifier for the task to be completed (Required)
 
 ##### Examples
 ```bash
-oj delete 42
+on_job delete 42
 ```
 The task with id 42 is removed from the list
 - If task 42 does not exist, does nothing
@@ -81,7 +79,7 @@ The task with id 42 is removed from the list
 #### list
 Shows all tasks
 ```bash
-oj list
+on_job list
 ```
 
 
