@@ -79,7 +79,33 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         let file = OpenOptions::new().write(true).truncate(true).open(self.file_path)?;
         let mut writer = BufWriter::new(file);
         for task in tasks {
-            println!("{task}");
+            writeln!(writer, "{task}")?;
+        }
+        Ok(())
+    }
+
+    fn delete_item(&mut self, id: usize)-> Result<(), Self::Err> {
+        let file = OpenOptions::new().read(true).open(self.file_path)?;
+        let reader = BufReader::new(file);
+        let tasks: Vec<Task> = reader
+            .lines()
+            .map_while(Result::ok)
+            .map(|line| line.parse::<Task>())
+            .collect::<Result<Vec<Task>, TaskError>>()?;
+
+        let tasks: Vec<_> = tasks
+            .into_iter()
+            .rev()
+            .enumerate()
+            .filter(|(idx, _) | *idx != id)
+            .map(|(_, task)| task)
+            .rev()
+            .collect()
+        ;
+
+        let file = OpenOptions::new().write(true).truncate(true).open(self.file_path)?;
+        let mut writer = BufWriter::new(file);
+        for task in tasks {
             writeln!(writer, "{task}")?;
         }
         Ok(())

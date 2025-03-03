@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display, str::FromStr};
+use std::{error::Error, fmt::Display, str::{FromStr, ParseBoolError}};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(super) struct Task {
@@ -23,30 +23,22 @@ impl Task {
 
 #[derive(Debug)]
 pub enum TaskError {
-    IO(std::io::Error),
-    Parse(std::str::ParseBoolError),
-    InvalidTask,
+    ParseBool(ParseBoolError),
+    InvalidTaskFormat,
 }
 
 impl Display for TaskError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            TaskError::IO(ref e) => e.fmt(f),
-            TaskError::Parse(ref e) => e.fmt(f),
-            TaskError::InvalidTask => "provided string could not be converted to a task".fmt(f),
+            TaskError::ParseBool(ref e) => e.fmt(f),
+            TaskError::InvalidTaskFormat => "provided string could not be converted to a task".fmt(f),
         }
-    }
-}
-
-impl From<std::io::Error> for TaskError {
-    fn from(value: std::io::Error) -> Self {
-        TaskError::IO(value)
     }
 }
 
 impl From<std::str::ParseBoolError> for TaskError {
     fn from(value: std::str::ParseBoolError) -> Self {
-        TaskError::Parse(value)
+        TaskError::ParseBool(value)
     }
 }
 
@@ -64,6 +56,7 @@ impl FromStr for Task {
             .collect();
 
         if let [name, tags_str, complete_str] = vals[..] {
+            // TODO: Check if this check is needed
             let tags = if tags_str.split(",").collect::<Vec<&str>>().is_empty() {
                 None
             } else {
@@ -81,7 +74,7 @@ impl FromStr for Task {
                 complete,
             })
         } else {
-            Err(TaskError::InvalidTask)
+            Err(TaskError::InvalidTaskFormat)
         }
     }
 }

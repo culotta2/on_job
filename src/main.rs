@@ -65,6 +65,7 @@ fn main() {
     let res = match args.command {
         Commands::AddItem(AddItemArgs { name, tags }) => plain_text_tracker.add_item(name, tags),
         Commands::CompleteItem(CompleteItemArgs { id }) => plain_text_tracker.complete_item(id),
+        Commands::DeleteItem(DeleteItemArgs { id }) => plain_text_tracker.delete_item(id),
         _ => todo!(),
     };
 
