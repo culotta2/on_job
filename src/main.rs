@@ -19,7 +19,7 @@ struct Args {
 }
 
 #[derive(clap::Args, Debug)]
-struct AddItemArgs {
+struct AddTaskArgs {
     #[arg(short, long)]
     /// Name of project
     name: String,
@@ -29,14 +29,14 @@ struct AddItemArgs {
 }
 
 #[derive(clap::Args, Debug)]
-struct CompleteItemArgs {
+struct CompleteTaskArgs {
     #[arg(value_parser)]
     /// id of task to complete
     id: usize,
 }
 
 #[derive(clap::Args, Debug)]
-struct DeleteItemArgs {
+struct DeleteTaskArgs {
     #[arg(value_parser)]
     /// id of task to delete
     id: usize,
@@ -45,13 +45,13 @@ struct DeleteItemArgs {
 #[derive(Debug, clap::Subcommand)]
 enum Commands {
     #[command(name = "add", about = "Adds a new task to a project")]
-    AddItem(AddItemArgs),
+    AddTask(AddTaskArgs),
     #[command(name = "complete", about = "Marks an existing task as finished")]
-    CompleteItem(CompleteItemArgs),
+    CompleteTask(CompleteTaskArgs),
     #[command(name = "delete", about = "Removes a task")]
-    DeleteItem(DeleteItemArgs),
+    DeleteTask(DeleteTaskArgs),
     #[command(name = "list", about = "Shows all tasks")]
-    ListItems,
+    ListTasks,
 }
 
 fn main() {
@@ -64,10 +64,10 @@ fn main() {
         task_tracker::plain_text_task_tracker::PlainTextTaskTracker::new(file_path);
 
     let _ = match args.command {
-        Commands::AddItem(AddItemArgs { name, tags }) => plain_text_tracker.add_item(name, tags),
-        Commands::CompleteItem(CompleteItemArgs { id }) => plain_text_tracker.complete_item(id),
-        Commands::DeleteItem(DeleteItemArgs { id }) => plain_text_tracker.delete_item(id),
-        Commands::ListItems => plain_text_tracker.list_items(),
+        Commands::AddTask(AddTaskArgs { name, tags }) => plain_text_tracker.add_task(name, tags),
+        Commands::CompleteTask(CompleteTaskArgs { id }) => plain_text_tracker.complete_task(id),
+        Commands::DeleteTask(DeleteTaskArgs { id }) => plain_text_tracker.delete_task(id),
+        Commands::ListTasks => plain_text_tracker.list_task(),
     };
 
 }

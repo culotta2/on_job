@@ -49,7 +49,7 @@ impl Error for PlainTextTaskTrackerError {}
 impl TaskTracker for PlainTextTaskTracker<'_> {
     type Err = PlainTextTaskTrackerError;
 
-    fn add_item(&self, name: String, tags: Option<Vec<String>>) -> Result<(), Self::Err> {
+    fn add_task(&self, name: String, tags: Option<Vec<String>>) -> Result<(), Self::Err> {
         let file = OpenOptions::new()
             .append(true)
             .create(true)
@@ -61,7 +61,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         Ok(())
     }
 
-    fn complete_item(&mut self, id: usize) -> Result<(), Self::Err> {
+    fn complete_task(&mut self, id: usize) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
         let mut tasks: Vec<Task> = reader
@@ -88,7 +88,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         Ok(())
     }
 
-    fn delete_item(&mut self, id: usize) -> Result<(), Self::Err> {
+    fn delete_task(&mut self, id: usize) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
         let tasks: Vec<Task> = reader
@@ -117,7 +117,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         Ok(())
     }
 
-    fn list_items(&self) -> Result<(), Self::Err> {
+    fn list_task(&self) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
         let tasks: Vec<Task> = reader

@@ -5,8 +5,8 @@ pub mod task;
 pub trait TaskTracker {
     type Err;
 
-    fn add_item(&self, name: String, tags: Option<Vec<String>>) -> Result<(), Self::Err>;
-    fn complete_item(&mut self, id: usize) -> Result<(), Self::Err>;
-    fn delete_item(&mut self, id: usize) -> Result<(), Self::Err>;
-    fn list_items(&self) -> Result<(), Self::Err>;
+    fn add_task(&self, name: String, tags: Option<Vec<String>>) -> Result<(), Self::Err>;
+    fn complete_task(&mut self, id: usize) -> Result<(), Self::Err>;
+    fn delete_task(&mut self, id: usize) -> Result<(), Self::Err>;
+    fn list_task(&self) -> Result<(), Self::Err>;
 }
