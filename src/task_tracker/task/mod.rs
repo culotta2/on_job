@@ -1,10 +1,14 @@
-use std::{error::Error, fmt::Display, str::{FromStr, ParseBoolError}};
+use std::{
+    error::Error,
+    fmt::Display,
+    str::{FromStr, ParseBoolError},
+};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(super) struct Task {
-    name: String,
-    tags: Option<Vec<String>>,
-    complete: bool,
+    pub name: String,
+    pub tags: Option<Vec<String>>,
+    pub complete: bool,
 }
 
 impl Task {
@@ -31,7 +35,9 @@ impl Display for TaskError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             TaskError::ParseBool(ref e) => e.fmt(f),
-            TaskError::InvalidTaskFormat => "provided string could not be converted to a task".fmt(f),
+            TaskError::InvalidTaskFormat => {
+                "provided string could not be converted to a task".fmt(f)
+            }
         }
     }
 }
@@ -62,7 +68,7 @@ impl FromStr for Task {
             } else {
                 Some(
                     tags_str
-                        .split(",")
+                        .split(", ")
                         .map(|x| x.into())
                         .collect::<Vec<String>>(),
                 )

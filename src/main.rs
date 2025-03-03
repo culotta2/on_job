@@ -2,6 +2,7 @@ use clap::Parser;
 use std::path::PathBuf;
 use task_tracker::TaskTracker;
 mod task_tracker;
+mod utils;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -62,16 +63,11 @@ fn main() {
     let mut plain_text_tracker =
         task_tracker::plain_text_task_tracker::PlainTextTaskTracker::new(file_path);
 
-    let res = match args.command {
+    let _ = match args.command {
         Commands::AddItem(AddItemArgs { name, tags }) => plain_text_tracker.add_item(name, tags),
         Commands::CompleteItem(CompleteItemArgs { id }) => plain_text_tracker.complete_item(id),
         Commands::DeleteItem(DeleteItemArgs { id }) => plain_text_tracker.delete_item(id),
-        _ => todo!(),
+        Commands::ListItems => plain_text_tracker.list_items(),
     };
 
-    // TODO: Change error handling
-    match res {
-        Ok(_) => println!("Added item successfully"),
-        Err(e) => eprintln!("Error: {e}"),
-    }
 }
