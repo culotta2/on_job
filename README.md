@@ -90,11 +90,8 @@ on_job list
 ```
 
 ## Roadmap
-- [x] Change project/description format to name/tags format
-- [ ] Change default file to use environment variable
-- [ ] Additional storage options
-    - [x] Local text file (delimited by ` | `)
-    - [ ] sqlite database
+- [ ] Cleanup
+    - [ ] Change default file to use environment variable
 - [ ] Add time (deadline) information to tasks
     - [ ] Specify this in the following ways
         - [ ] absolute time (14:00)
@@ -107,3 +104,6 @@ on_job list
 - [ ] Add ability to filter which tasks are shown
     - [ ] Only incomplete tasks
     - [ ] Only tasks overdue/due today
+### Potential features
+- [ ] Additional storage options
+    - [ ] sqlite database
