@@ -1,7 +1,6 @@
 pub mod plain_text_task_tracker;
 pub mod task;
 
-// TODO: Return actual error types, not string
 pub trait TaskTracker {
     type Err;
 

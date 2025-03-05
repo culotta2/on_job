@@ -26,6 +26,7 @@ struct AddTaskArgs {
     #[arg(short, long, num_args=1..)]
     /// Tag(s) to categorized a task
     tags: Option<Vec<String>>,
+    // TODO: Add deadline flags
 }
 
 #[derive(clap::Args, Debug)]
@@ -59,15 +60,18 @@ fn main() {
     let default_path = PathBuf::from(DEFAULT_FILE);
     let args = Args::parse();
     let file_path = args.file.as_ref().unwrap_or(&default_path);
-    // TODO: Determine how to define which task tracker to use
     let mut plain_text_tracker =
         task_tracker::plain_text_task_tracker::PlainTextTaskTracker::new(file_path);
 
-    let _ = match args.command {
+    let res = match args.command {
         Commands::AddTask(AddTaskArgs { name, tags }) => plain_text_tracker.add_task(name, tags),
         Commands::CompleteTask(CompleteTaskArgs { id }) => plain_text_tracker.complete_task(id),
         Commands::DeleteTask(DeleteTaskArgs { id }) => plain_text_tracker.delete_task(id),
         Commands::ListTasks => plain_text_tracker.list_task(),
     };
 
+    match res {
+        Ok(()) => (),
+        Err(e) => eprintln!("Process failed: {e}"),
+    }
 }
