@@ -21,7 +21,7 @@ Prints version information
 #### add
 Creates a new, incomplete task
 ```bash
-on_job add --name <NAME> --tags <TAG> [<TAG> ...]
+on_job add --name <NAME> --tags <TAG> [<TAG> ...] --deadline <DEADLINE>
 ```
 ##### Options
 - `-n --name <NAME>`
@@ -30,21 +30,33 @@ The name/description of the task (Required)
 - `-t --tags <TAG> [<TAG> ...]`
 Tags categorizing the task (Optional)
 
+- `-d --deadline <DEADLINE>
+Deadline by which this task should be complete [default: "2025-03-07 17:00"]
+    - Can be specified in three ways
+        - Date: "YYYY-DD-MM"
+        - Time: "HH:MM"
+        - Date and time: "YYYY-DD-MM HH:MM"
+
 ##### Examples
 ```bash
 on_job add --name "Shuffle papers around" --tags "Busy work"
 ```
-Adds one task with one tag
+Adds one task with one tag due at the end of the day (current day, 17:00)
 
 ```bash
-on_job add -n "Pickup Coffee"
+on_job add -n "Pickup Coffee" -d "13:00"
 ```
-Adds one task without a tag
+Adds one task without a tag due at 13:00 (1pm)
 
 ```bash
-on_job add -n "Meet with client" -t "External" "High stakes"
+on_job add -n "Meet with client" -t "External" "High stakes" --deadline "2025-03-10"
 ```
-Adds one task with multiple tags
+Adds one task with multiple tags due at the end of the day on March 10
+
+```bash
+on_job add -n "Avoid client interaction" --deadline "2099-12-31 23:59"
+```
+Adds one task without any tags due at the last minute of 2099
 
 #### complete
 Marks a preexisting task as finished
@@ -90,20 +102,21 @@ on_job list
 ```
 
 ## Roadmap
+- [x] Add time (deadline) information to tasks
+    - [x] Specify as a date and time
+        - "YYYY-DD-MM: HH:MM"
+    - [x] Specify as a date only
+        - "YYYY-DD-MM"
+    - [x] Specify as a time only
+        - "HH:MM"
+    - [ ] Add additional pre-defined markers
+        - End of day (default)
+        - End of week
+        - End of hour
+        - Tomorrow morning
+        - etc.
 - [ ] Cleanup
     - [ ] Change default file to use environment variable
-- [ ] Add time (deadline) information to tasks
-    - [ ] Specify this in the following ways
-        - [ ] absolute time (14:00)
-        - [ ] relative time (1hr)
-        - [ ] defined markers
-            - `EOD`: End of day (17:00)
-            - `MOR`: Next morning (8:00)
-            - `EOH`: End of hour (at 9:34 -> 10:00)
-            - etc.
 - [ ] Add ability to filter which tasks are shown
     - [ ] Only incomplete tasks
     - [ ] Only tasks overdue/due today
-### Potential features
-- [ ] Additional storage options
-    - [ ] sqlite database

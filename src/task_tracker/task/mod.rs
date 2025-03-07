@@ -9,12 +9,12 @@ use std::{
 pub(super) struct Task {
     pub name: String,
     pub tags: Option<Vec<String>>,
-    pub deadline: Option<DateTime<Utc>>,
+    pub deadline: DateTime<Utc>,
     pub complete: bool,
 }
 
 impl Task {
-    pub fn new(name: String, tags: Option<Vec<String>>, deadline: Option<DateTime<Utc>>) -> Self {
+    pub fn new(name: String, tags: Option<Vec<String>>, deadline: DateTime<Utc>) -> Self {
         Task {
             name,
             tags,
@@ -29,16 +29,13 @@ impl Task {
 
     pub fn local_deadline(&self) -> String {
         self.deadline
-            .map(|dt| {
-                dt.with_timezone(&Local)
-                    .format("%m/%d/%Y %H:%m:%S")
-                    .to_string()
-            })
-            .unwrap_or("".into())
+            .with_timezone(&Local)
+            .format("%m/%d/%Y %H:%m:%S")
+            .to_string()
     }
 
     pub fn export_deadline(&self) -> String {
-        self.deadline.map(|dt| dt.to_rfc3339()).unwrap_or("".into())
+        self.deadline.to_rfc3339()
     }
 }
 
@@ -97,11 +94,7 @@ impl FromStr for Task {
                         .collect::<Vec<String>>(),
                 )
             };
-            let deadline = if deadline.trim().is_empty() {
-                None
-            } else {
-                Some(DateTime::parse_from_rfc3339(deadline.trim())?.to_utc())
-            };
+            let deadline = DateTime::parse_from_rfc3339(deadline.trim())?.to_utc();
             let complete = complete_str.parse::<bool>()?;
             Ok(Task {
                 name: name.into(),

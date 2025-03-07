@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+
 use crate::task_tracker::TaskTracker;
 use crate::task_tracker::task::{Task, TaskError};
 use crate::utils::right_pad;
@@ -49,14 +51,17 @@ impl Error for PlainTextTaskTrackerError {}
 impl TaskTracker for PlainTextTaskTracker<'_> {
     type Err = PlainTextTaskTrackerError;
 
-    fn add_task(&self, name: String, tags: Option<Vec<String>>) -> Result<(), Self::Err> {
+    fn add_task(
+        &self,
+        name: String,
+        tags: Option<Vec<String>>,
+        deadline: DateTime<Utc>,
+    ) -> Result<(), Self::Err> {
         let file = OpenOptions::new()
             .append(true)
             .create(true)
             .open(self.file_path)?;
-
-        // FIXME: Deadline arg
-        let task = Task::new(name, tags, None);
+        let task = Task::new(name, tags, deadline);
         let mut writer = BufWriter::new(file);
         writeln!(writer, "{task}")?;
         Ok(())
