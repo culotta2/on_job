@@ -43,6 +43,22 @@ struct DeleteTaskArgs {
     id: usize,
 }
 
+#[derive(clap::Args, Debug)]
+struct ListTasksArgs {
+    #[arg(short, long)]
+    /// Only show items that have not been completed
+    incomplete: bool,
+    #[arg(short, long)]
+    /// Only show items that are overdue
+    overdue: bool,
+    #[arg(short, long)]
+    /// Only show the next `n` items due
+    number: bool,
+    #[arg(short, long, num_args=1..)]
+    /// Only show items with specific tags
+    tags: Option<Vec<String>>,
+}
+
 #[derive(Debug, clap::Subcommand)]
 enum Commands {
     #[command(name = "add", about = "Adds a new task to a project")]
@@ -52,7 +68,7 @@ enum Commands {
     #[command(name = "delete", about = "Removes a task")]
     DeleteTask(DeleteTaskArgs),
     #[command(name = "list", about = "Shows all tasks")]
-    ListTasks,
+    ListTasks(ListTasksArgs),
 }
 
 fn main() {
@@ -67,7 +83,8 @@ fn main() {
         Commands::AddTask(AddTaskArgs { name, tags }) => plain_text_tracker.add_task(name, tags),
         Commands::CompleteTask(CompleteTaskArgs { id }) => plain_text_tracker.complete_task(id),
         Commands::DeleteTask(DeleteTaskArgs { id }) => plain_text_tracker.delete_task(id),
-        Commands::ListTasks => plain_text_tracker.list_task(),
+        // TODO: Implement using the `ListTasksArgs`
+        Commands::ListTasks(ListTasksArgs { .. }) => plain_text_tracker.list_task(),
     };
 
     match res {
