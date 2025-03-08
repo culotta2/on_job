@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::task_tracker::TaskTracker;
 use crate::task_tracker::task::{Task, TaskError};
 use crate::utils::right_pad;
+use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::Display;
 use std::fs::OpenOptions;
@@ -123,10 +124,15 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         Ok(())
     }
 
-    fn list_task(&self) -> Result<(), Self::Err> {
+    fn list_task(
+        &self,
+        incomplete: bool,
+        overdue: bool,
+        tags: Option<Vec<String>>,
+    ) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
-        let tasks: Vec<Task> = reader
+        let mut tasks: Vec<Task> = reader
             .lines()
             .map_while(Result::ok)
             .map(|line| line.parse::<Task>())
@@ -179,7 +185,32 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
             "| {id_field} | {name_field} | {tags_field} | {deadline_field} | {complete_field} |"
         );
         println!("{h_bar}");
-        for (idx, task) in tasks.iter().rev().enumerate() {
+        tasks.sort_by(|task_a, task_b| task_a.deadline.cmp(&task_b.deadline));
+        for (idx, task) in tasks
+            .iter()
+            .enumerate()
+            .filter(|(_, task)| match incomplete {
+                true => !task.complete,
+                false => true,
+            })
+            .filter(|(_, task)| match overdue {
+                true => (task.deadline <= Utc::now()) & !task.complete,
+                false => true,
+            })
+            .filter(|(_, task)| {
+                if let Some(tags) = &tags {
+                    task.tags
+                        .as_ref()
+                        .map(HashSet::from_iter)
+                        .unwrap_or(HashSet::new())
+                        .intersection(&HashSet::from_iter(tags))
+                        .count()
+                        > 0
+                } else {
+                    true
+                }
+            })
+        {
             let id = right_pad(&idx.to_string(), id_padding, ' ');
             let name = right_pad(&task.name, name_padding, ' ');
             let tags = right_pad(

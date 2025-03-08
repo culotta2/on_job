@@ -39,9 +39,7 @@ impl Default for DateTimeWrapper {
     fn default() -> Self {
         Self(
             Local::now()
-                .with_time(
-                    NaiveTime::from_hms_opt(17, 0, 0).expect("Hardcoded values")
-                )
+                .with_time(NaiveTime::from_hms_opt(17, 0, 0).expect("Hardcoded values"))
                 .single()
                 .expect("Hardcoded values"),
         )
@@ -107,9 +105,6 @@ struct ListTasksArgs {
     #[arg(short, long)]
     /// Only show items that are overdue
     overdue: bool,
-    #[arg(short, long)]
-    /// Only show the next `n` items due
-    number: bool,
     #[arg(short, long, num_args=1..)]
     /// Only show items with specific tags
     tags: Option<Vec<String>>,
@@ -144,8 +139,11 @@ fn main() {
         }) => plain_text_tracker.add_task(name, tags, deadline.0.into()),
         Commands::CompleteTask(CompleteTaskArgs { id }) => plain_text_tracker.complete_task(id),
         Commands::DeleteTask(DeleteTaskArgs { id }) => plain_text_tracker.delete_task(id),
-        // TODO: Implement using the `ListTasksArgs`
-        Commands::ListTasks(ListTasksArgs { .. }) => plain_text_tracker.list_task(),
+        Commands::ListTasks(ListTasksArgs {
+            incomplete,
+            overdue,
+            tags,
+        }) => plain_text_tracker.list_task(incomplete, overdue, tags),
     };
 
     match res {
