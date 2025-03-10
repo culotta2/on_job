@@ -115,8 +115,8 @@ on_job list
         - End of hour
         - Tomorrow morning
         - etc.
-- [ ] Add ability to filter which tasks are shown
-    - [ ] Only incomplete tasks
-    - [ ] Only tasks overdue/due today
+- [x] Add ability to filter which tasks are shown
+    - [x] Only incomplete tasks
+    - [x] Only tasks overdue/due today
 - [ ] Cleanup
     - [ ] Change default file to use environment variable
