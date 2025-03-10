@@ -118,5 +118,5 @@ on_job list
 - [x] Add ability to filter which tasks are shown
     - [x] Only incomplete tasks
     - [x] Only tasks overdue/due today
-- [ ] Cleanup
-    - [ ] Change default file to use environment variable
+- [x] Cleanup
+    - [x] Change default file to use environment variable

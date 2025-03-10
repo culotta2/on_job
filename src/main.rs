@@ -1,6 +1,6 @@
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Offset, TimeZone};
 use clap::Parser;
-use std::{fmt::Display, path::PathBuf, str::FromStr};
+use std::{env::{self}, fmt::Display, path::PathBuf, str::FromStr};
 use task_tracker::TaskTracker;
 mod task_tracker;
 mod utils;
@@ -123,11 +123,14 @@ enum Commands {
 }
 
 fn main() {
-    const DEFAULT_FILE: &str = "./database";
-    let default_path = PathBuf::from(DEFAULT_FILE);
+    const ENV_KEY: &str = "ON_JOB_FILE";
     let args = Args::parse();
+    let file_path = match (args.file.as_ref(), env::var(ENV_KEY)) {
+        (Some(val), _) => val,
+        (_, Ok(var)) => &PathBuf::from(var),
+        (None, Err(e)) => panic!("Error reading task file: {e}"),
+    };
 
-    let file_path = args.file.as_ref().unwrap_or(&default_path);
     let mut plain_text_tracker =
         task_tracker::plain_text_task_tracker::PlainTextTaskTracker::new(file_path);
 
