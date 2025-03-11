@@ -105,8 +105,8 @@ struct DeleteTaskArgs {
 #[derive(clap::Args, Debug)]
 struct ListTasksArgs {
     #[arg(short, long)]
-    /// Only show items that have not been completed
-    incomplete: bool,
+    /// Show both complete and incomplete tasks
+    all: bool,
     #[arg(short, long)]
     /// Only show items that are overdue
     overdue: bool,
@@ -123,7 +123,7 @@ enum Commands {
     CompleteTask(CompleteTaskArgs),
     #[command(name = "delete", about = "Removes a task")]
     DeleteTask(DeleteTaskArgs),
-    #[command(name = "list", about = "Shows all tasks")]
+    #[command(name = "list", about = "Show tasks")]
     ListTasks(ListTasksArgs),
 }
 
@@ -147,11 +147,9 @@ fn main() {
         }) => plain_text_tracker.add_task(name, tags, deadline.0.into()),
         Commands::CompleteTask(CompleteTaskArgs { id }) => plain_text_tracker.complete_task(id),
         Commands::DeleteTask(DeleteTaskArgs { id }) => plain_text_tracker.delete_task(id),
-        Commands::ListTasks(ListTasksArgs {
-            incomplete,
-            overdue,
-            tags,
-        }) => plain_text_tracker.list_task(incomplete, overdue, tags),
+        Commands::ListTasks(ListTasksArgs { all, overdue, tags }) => {
+            plain_text_tracker.list_task(all, overdue, tags)
+        }
     };
 
     match res {

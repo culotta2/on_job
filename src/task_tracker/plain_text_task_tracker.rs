@@ -6,7 +6,7 @@ use crate::utils::right_pad;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::Display;
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 
@@ -17,6 +17,16 @@ pub struct PlainTextTaskTracker<'a> {
 impl<'a> PlainTextTaskTracker<'a> {
     pub fn new(file_path: &'a Path) -> Self {
         PlainTextTaskTracker { file_path }
+    }
+
+    fn read_tasks_from_file(reader: BufReader<File>) -> Result<Vec<Task>, ParseTaskError> {
+        let mut tasks: Vec<Task> = reader
+            .lines()
+            .map_while(Result::ok)
+            .map(|line| line.parse::<Task>())
+            .collect::<Result<Vec<Task>, ParseTaskError>>()?;
+        tasks.sort_by(|task_a, task_b| task_a.deadline.cmp(&task_b.deadline));
+        Ok(tasks)
     }
 }
 
@@ -71,14 +81,10 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
     fn complete_task(&mut self, id: usize) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
-        let mut tasks: Vec<Task> = reader
-            .lines()
-            .map_while(Result::ok)
-            .map(|line| line.parse::<Task>())
-            .collect::<Result<Vec<Task>, ParseTaskError>>()?;
-        tasks.sort_by(|task_a, task_b| task_a.deadline.cmp(&task_b.deadline));
+        let mut tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
         tasks
             .iter_mut()
+            .filter(|task| !task.complete)
             .enumerate()
             .filter(|(idx, _)| *idx == id)
             .for_each(|(_, task)| task.complete());
@@ -97,18 +103,13 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
     fn delete_task(&mut self, id: usize) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
-        let mut tasks: Vec<Task> = reader
-            .lines()
-            .map_while(Result::ok)
-            .map(|line| line.parse::<Task>())
-            .collect::<Result<Vec<Task>, ParseTaskError>>()?;
-        tasks.sort_by(|task_a, task_b| task_a.deadline.cmp(&task_b.deadline));
+        let tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
         let tasks: Vec<_> = tasks
             .into_iter()
+            .filter(|task| !task.complete)
             .enumerate()
             .filter(|(idx, _)| *idx != id)
             .map(|(_, task)| task)
-            .rev()
             .collect();
 
         let file = OpenOptions::new()
@@ -124,17 +125,18 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
 
     fn list_task(
         &self,
-        incomplete: bool,
+        all: bool,
         overdue: bool,
         tags: Option<Vec<String>>,
     ) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
-        let mut tasks: Vec<Task> = reader
-            .lines()
-            .map_while(Result::ok)
-            .map(|line| line.parse::<Task>())
-            .collect::<Result<Vec<Task>, ParseTaskError>>()?;
+        let tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
+
+        let tasks = match all {
+            true => tasks,
+            false => tasks.into_iter().filter(|task| !task.complete).collect(),
+        };
 
         let max_idx = tasks.len().to_string().len();
         let (max_name, max_tags) = tasks
@@ -179,18 +181,18 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         let complete_field = "Done";
         let deadline_field = right_pad("Due", DEADLINE_PADDING, ' ');
 
-        println!(
-            "| {id_field} | {name_field} | {tags_field} | {deadline_field} | {complete_field} |"
-        );
+        match all {
+            true => {
+                println!("| {name_field} | {tags_field} | {deadline_field} | {complete_field} |")
+            }
+            false => println!(
+                "| {id_field} | {name_field} | {tags_field} | {deadline_field} | {complete_field} |"
+            ),
+        };
         println!("{h_bar}");
-        tasks.sort_by(|task_a, task_b| task_a.deadline.cmp(&task_b.deadline));
         for (idx, task) in tasks
             .iter()
             .enumerate()
-            .filter(|(_, task)| match incomplete {
-                true => !task.complete,
-                false => true,
-            })
             .filter(|(_, task)| match overdue {
                 true => (task.deadline <= Utc::now()) & !task.complete,
                 false => true,
@@ -225,7 +227,10 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
                 true => "✓",
                 false => "",
             };
-            println!("| {id} | {name} | {tags} | {deadline} | {complete:^4} |");
+            match all {
+                true => println!("| {name} | {tags} | {deadline} | {complete:^4} |"),
+                false => println!("| {id} | {name} | {tags} | {deadline} | {complete:^4} |"),
+            }
         }
         Ok(())
     }
