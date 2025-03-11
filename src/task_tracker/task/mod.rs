@@ -84,7 +84,12 @@ impl FromStr for Task {
             .collect();
 
         if let [name, tags_str, complete_str, deadline] = vals[..] {
-            let tags = if tags_str.split(",").collect::<Vec<&str>>().is_empty() {
+            let tags = if tags_str
+                .split(",")
+                .filter(|tag| tag.trim() != "")
+                .collect::<Vec<&str>>()
+                .is_empty()
+            {
                 None
             } else {
                 Some(

@@ -1,6 +1,11 @@
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Offset, TimeZone};
 use clap::Parser;
-use std::{env::{self}, fmt::Display, path::PathBuf, str::FromStr};
+use std::{
+    env::{self},
+    fmt::Display,
+    path::PathBuf,
+    str::FromStr,
+};
 use task_tracker::TaskTracker;
 mod task_tracker;
 mod utils;

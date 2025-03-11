@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 
 use crate::task_tracker::TaskTracker;
-use crate::task_tracker::task::{Task, ParseTaskError};
+use crate::task_tracker::task::{ParseTaskError, Task};
 use crate::utils::right_pad;
 use std::collections::HashSet;
 use std::error::Error;
