@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 
 use crate::task_tracker::TaskTracker;
-use crate::task_tracker::task::{Task, TaskError};
+use crate::task_tracker::task::{Task, ParseTaskError};
 use crate::utils::right_pad;
 use std::collections::HashSet;
 use std::error::Error;
@@ -23,7 +23,7 @@ impl<'a> PlainTextTaskTracker<'a> {
 #[derive(Debug)]
 pub enum PlainTextTaskTrackerError {
     IO(std::io::Error),
-    InvalidTask(TaskError),
+    InvalidTask(ParseTaskError),
 }
 
 impl Display for PlainTextTaskTrackerError {
@@ -41,8 +41,8 @@ impl From<std::io::Error> for PlainTextTaskTrackerError {
     }
 }
 
-impl From<TaskError> for PlainTextTaskTrackerError {
-    fn from(value: TaskError) -> Self {
+impl From<ParseTaskError> for PlainTextTaskTrackerError {
+    fn from(value: ParseTaskError) -> Self {
         PlainTextTaskTrackerError::InvalidTask(value)
     }
 }
@@ -75,11 +75,10 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
             .lines()
             .map_while(Result::ok)
             .map(|line| line.parse::<Task>())
-            .collect::<Result<Vec<Task>, TaskError>>()?;
-
+            .collect::<Result<Vec<Task>, ParseTaskError>>()?;
+        tasks.sort_by(|task_a, task_b| task_a.deadline.cmp(&task_b.deadline));
         tasks
             .iter_mut()
-            .rev() // TODO: Change rev to order by deadline desc
             .enumerate()
             .filter(|(idx, _)| *idx == id)
             .for_each(|(_, task)| task.complete());
@@ -98,15 +97,14 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
     fn delete_task(&mut self, id: usize) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
-        let tasks: Vec<Task> = reader
+        let mut tasks: Vec<Task> = reader
             .lines()
             .map_while(Result::ok)
             .map(|line| line.parse::<Task>())
-            .collect::<Result<Vec<Task>, TaskError>>()?;
-
+            .collect::<Result<Vec<Task>, ParseTaskError>>()?;
+        tasks.sort_by(|task_a, task_b| task_a.deadline.cmp(&task_b.deadline));
         let tasks: Vec<_> = tasks
             .into_iter()
-            .rev()
             .enumerate()
             .filter(|(idx, _)| *idx != id)
             .map(|(_, task)| task)
@@ -136,7 +134,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
             .lines()
             .map_while(Result::ok)
             .map(|line| line.parse::<Task>())
-            .collect::<Result<Vec<Task>, TaskError>>()?;
+            .collect::<Result<Vec<Task>, ParseTaskError>>()?;
 
         let max_idx = tasks.len().to_string().len();
         let (max_name, max_tags) = tasks

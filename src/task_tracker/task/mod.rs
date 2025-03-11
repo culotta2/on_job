@@ -30,7 +30,7 @@ impl Task {
     pub fn local_deadline(&self) -> String {
         self.deadline
             .with_timezone(&Local)
-            .format("%m/%d/%Y %H:%m:%S")
+            .format("%m/%d/%Y %H:%M:%S")
             .to_string()
     }
 
@@ -40,40 +40,40 @@ impl Task {
 }
 
 #[derive(Debug)]
-pub enum TaskError {
+pub enum ParseTaskError {
     ParseBool(ParseBoolError),
     InvalidTaskFormat,
     InvalidDateFormat(ParseError),
 }
 
-impl Display for TaskError {
+impl Display for ParseTaskError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            TaskError::ParseBool(ref e) => e.fmt(f),
-            TaskError::InvalidDateFormat(ref e) => e.fmt(f),
-            TaskError::InvalidTaskFormat => {
+            ParseTaskError::ParseBool(ref e) => e.fmt(f),
+            ParseTaskError::InvalidDateFormat(ref e) => e.fmt(f),
+            ParseTaskError::InvalidTaskFormat => {
                 "provided string could not be converted to a task".fmt(f)
             }
         }
     }
 }
 
-impl From<std::str::ParseBoolError> for TaskError {
+impl From<std::str::ParseBoolError> for ParseTaskError {
     fn from(value: std::str::ParseBoolError) -> Self {
-        TaskError::ParseBool(value)
+        ParseTaskError::ParseBool(value)
     }
 }
 
-impl From<ParseError> for TaskError {
+impl From<ParseError> for ParseTaskError {
     fn from(value: ParseError) -> Self {
-        TaskError::InvalidDateFormat(value)
+        ParseTaskError::InvalidDateFormat(value)
     }
 }
 
-impl Error for TaskError {}
+impl Error for ParseTaskError {}
 
 impl FromStr for Task {
-    type Err = TaskError;
+    type Err = ParseTaskError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let vals: Vec<_> = s
@@ -103,7 +103,7 @@ impl FromStr for Task {
                 complete,
             })
         } else {
-            Err(TaskError::InvalidTaskFormat)
+            Err(ParseTaskError::InvalidTaskFormat)
         }
     }
 }

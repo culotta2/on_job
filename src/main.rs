@@ -8,7 +8,7 @@ mod utils;
 #[derive(Debug, Parser)]
 #[command(
     author="Dominic Culotta",
-    version="0.3.0",
+    version="0.3.1",
     about="A todo CLI application",
     long_about = None
 )]
