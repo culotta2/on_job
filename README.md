@@ -30,7 +30,7 @@ The name/description of the task (Required)
 - `-t --tags <TAG> [<TAG> ...]`
 Tags categorizing the task (Optional)
 
-- `-d --deadline <DEADLINE>
+- `-d --deadline <DEADLINE>`
 Deadline by which this task should be complete [default: "2025-03-07 17:00"]
     - Can be specified in three ways
         - Date: "YYYY-DD-MM"
@@ -96,10 +96,39 @@ The task with id 42 is removed from the list
 - Does not update subsequent tasks' id values
 
 #### list
-Shows all tasks
 ```bash
 on_job list
 ```
+Shows incomplete tasks (by default)
+
+##### Options
+- `-a --all`
+Shows completed tasks in addition to incomplete tasks
+- If passed, removes the id column as well. This is to avoid one
+task having differing ids in different contexts
+
+- `-o --overdue`
+Filters list to show tasks for which the deadline has passed
+
+- `-t --tags <TAG> [<TAG> ...]`
+Filters list to only show tasks with (one of) the passed tags
+
+##### Examples
+
+```bash
+on_job list -a
+```
+Shows all tasks
+
+```bash
+on_job list -o -t "Project 1"
+```
+Shows all overdue tasks for Project 1
+
+```bash
+on_job list -a -t "A" "B"
+```
+Shows all tasks for projects A and B
 
 ## Roadmap
 - [x] Add time (deadline) information to tasks

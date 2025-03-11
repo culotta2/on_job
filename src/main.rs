@@ -108,10 +108,10 @@ struct ListTasksArgs {
     /// Show both complete and incomplete tasks
     all: bool,
     #[arg(short, long)]
-    /// Only show items that are overdue
+    /// Only show tasks that are overdue
     overdue: bool,
     #[arg(short, long, num_args=1..)]
-    /// Only show items with specific tags
+    /// Only show tasks with specific tags
     tags: Option<Vec<String>>,
 }
 
