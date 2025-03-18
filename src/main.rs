@@ -13,7 +13,7 @@ mod utils;
 #[derive(Debug, Parser)]
 #[command(
     author="Dominic Culotta",
-    version="0.3.1",
+    version="0.3.2",
     about="A todo CLI application",
     long_about = None
 )]

@@ -103,15 +103,15 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
     fn delete_task(&mut self, id: usize) -> Result<(), Self::Err> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
-        let tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
-        let tasks: Vec<_> = tasks
-            .into_iter()
+        let mut tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
+        if let Some(index) = tasks
+            .iter()
             .filter(|task| !task.complete)
             .enumerate()
-            .filter(|(idx, _)| *idx != id)
-            .map(|(_, task)| task)
-            .collect();
-
+            .position(|(idx, _)| idx == id)
+        {
+            tasks.remove(index);
+        }
         let file = OpenOptions::new()
             .write(true)
             .truncate(true)
