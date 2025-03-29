@@ -104,22 +104,30 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         let file = OpenOptions::new().read(true).open(self.file_path)?;
         let reader = BufReader::new(file);
         let mut tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
-        if let Some(index) = tasks
+        if let Some((_, delete_idx)) = tasks
             .iter()
-            .filter(|task| !task.complete)
-            .enumerate()
-            .position(|(idx, _)| idx == id)
+            .scan((None, None), |(incomplete_idx, total_idx), task| {
+                *total_idx = (*total_idx).map(|idx| idx + 1).or(Some(0));
+                if !task.complete {
+                    *incomplete_idx = (*incomplete_idx).map(|idx| idx + 1).or(Some(0));
+                }
+                Some((*incomplete_idx, *total_idx))
+            })
+            .flat_map(|(incomplete_idx, total_idx)| Some((incomplete_idx?, total_idx?)))
+            .find(|(incomplete_idx, _)| { *incomplete_idx == id })
         {
-            tasks.remove(index);
+            _ = tasks.remove(delete_idx);
+
+            let file = OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open(self.file_path)?;
+            let mut writer = BufWriter::new(file);
+            for task in tasks {
+                writeln!(writer, "{task}")?;
+            }
         }
-        let file = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .open(self.file_path)?;
-        let mut writer = BufWriter::new(file);
-        for task in tasks {
-            writeln!(writer, "{task}")?;
-        }
+
         Ok(())
     }
 
