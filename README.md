@@ -8,14 +8,15 @@ You can add, complete, delete, and list your tasks. Tasks are stored in a local 
 on_job [OPTIONS] <COMMAND>
 ```
 ### Options
-- `-f --file <FILE>`
-Specify the database file path. By default, a file called `database` is used in the current directory (*TO BE CHANGED*)
-
 - `-h --help`
 Prints help information
 
 - `-V --version`
 Prints version information
+
+- `-f --file <FILE>`
+Specify the database file path
+- Must be specified if the environment variable `ON_JOB_FILE` is not set
 
 ### Commands
 #### add
