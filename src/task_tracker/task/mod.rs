@@ -144,3 +144,123 @@ impl Display for Task {
         )
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn parse_good_task_single_tag() {
+        let task_str = "| Task 1 | ugh | false | 2025-03-17T22:00:00+00:00 |";
+        let expected_task = Task {
+            name: "Task 1".into(),
+            tags: Some(vec!["ugh".into()]),
+            deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+            complete: false,
+        };
+        let parsed_task = Task::from_str(task_str).unwrap();
+        assert_eq!(expected_task, parsed_task)
+    }
+
+    #[test]
+    fn parse_good_task_multiple_tags() {
+        let task_str = "| Task 1 | project, ugh | false | 2025-03-17T22:00:00+00:00 |";
+        let expected_task = Task {
+            name: "Task 1".into(),
+            tags: Some(vec!["project".into(), "ugh".into()]),
+            deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+            complete: false,
+        };
+        let parsed_task = Task::from_str(task_str).unwrap();
+        assert_eq!(expected_task, parsed_task)
+    }
+
+    #[test]
+    fn parse_good_task_no_tags() {
+        let task_str = "| Task 1 | | false | 2025-03-17T22:00:00+00:00 |";
+        let expected_task = Task {
+            name: "Task 1".into(),
+            tags: None,
+            deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+            complete: false,
+        };
+        let parsed_task = Task::from_str(task_str).unwrap();
+        assert_eq!(expected_task, parsed_task)
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_bad_task_too_few_columns() {
+        let task_str = "| My task | Should be deadline |";
+        let expected_task = Task {
+            name: "Task 1".into(),
+            tags: Some(vec!["project".into(), "ugh".into()]),
+            deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+            complete: false,
+        };
+        let parsed_task = Task::from_str(task_str).unwrap();
+        assert_eq!(expected_task, parsed_task)
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_bad_task_too_many_columns() {
+        let task_str = "| project, ugh | false | 2025-03-17T22:00:00+00:00 | Additional stuff";
+        let expected_task = Task {
+            name: "Task 1".into(),
+            tags: Some(vec!["project".into(), "ugh".into()]),
+            deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+            complete: false,
+        };
+        let parsed_task = Task::from_str(task_str).unwrap();
+        assert_eq!(expected_task, parsed_task)
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_bad_task_no_name() {
+        let task_str = "| project, ugh | false | 2025-03-17T22:00:00+00:00 |";
+        let expected_task = Task {
+            name: "Task 1".into(),
+            tags: Some(vec!["project".into(), "ugh".into()]),
+            deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+            complete: false,
+        };
+        let parsed_task = Task::from_str(task_str).unwrap();
+        assert_eq!(expected_task, parsed_task)
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_bad_task_no_deadline() {
+        let task_str = "| project, ugh | 2025-03-17T22:00:00+00:00 |";
+        let expected_task = Task {
+            name: "Task 1".into(),
+            tags: Some(vec!["project".into(), "ugh".into()]),
+            deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+            complete: false,
+        };
+        let parsed_task = Task::from_str(task_str).unwrap();
+        assert_eq!(expected_task, parsed_task)
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_bad_task_bad_deadline() {
+        let task_str = "| project, ugh | 2025-03-40T22:00:00+00:00 |";
+        Task::from_str(task_str).unwrap();
+    }
+}
