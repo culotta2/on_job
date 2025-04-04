@@ -6,7 +6,7 @@ use crate::utils::right_pad;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::Display;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 
@@ -19,7 +19,7 @@ impl<'a> PlainTextTaskTracker<'a> {
         PlainTextTaskTracker { file_path }
     }
 
-    fn read_tasks_from_file(reader: BufReader<File>) -> Result<Vec<Task>, ParseTaskError> {
+    fn read_tasks_from_file<B: BufRead>(reader: B) -> Result<Vec<Task>, ParseTaskError> {
         let mut tasks: Vec<Task> = reader
             .lines()
             .map_while(Result::ok)
@@ -68,11 +68,11 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         tags: Option<Vec<String>>,
         deadline: DateTime<Utc>,
     ) -> Result<(), Self::Err> {
+        let task = Task::new(name, tags, deadline);
         let file = OpenOptions::new()
             .append(true)
             .create(true)
             .open(self.file_path)?;
-        let task = Task::new(name, tags, deadline);
         let mut writer = BufWriter::new(file);
         writeln!(writer, "{task}")?;
         Ok(())
@@ -114,7 +114,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
                 Some((*incomplete_idx, *total_idx))
             })
             .flat_map(|(incomplete_idx, total_idx)| Some((incomplete_idx?, total_idx?)))
-            .find(|(incomplete_idx, _)| { *incomplete_idx == id })
+            .find(|(incomplete_idx, _)| *incomplete_idx == id)
         {
             _ = tasks.remove(delete_idx);
 
