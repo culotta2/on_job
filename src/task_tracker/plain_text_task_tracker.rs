@@ -45,8 +45,21 @@ impl PlainTextTaskTracker {
             .for_each(|(_, task)| task.complete());
     }
 
-    fn delete_task_logic() {
-        unimplemented!()
+    fn delete_task_logic(tasks: &mut Vec<Task>, id: usize) {
+        if let Some((_, delete_idx)) = tasks
+            .iter()
+            .scan((None, None), |(incomplete_idx, total_idx), task| {
+                *total_idx = (*total_idx).map(|idx| idx + 1).or(Some(0));
+                if !task.complete {
+                    *incomplete_idx = (*incomplete_idx).map(|idx| idx + 1).or(Some(0));
+                }
+                Some((*incomplete_idx, *total_idx))
+            })
+            .flat_map(|(incomplete_idx, total_idx)| Some((incomplete_idx?, total_idx?)))
+            .find(|(incomplete_idx, _)| *incomplete_idx == id)
+        {
+            _ = tasks.remove(delete_idx);
+        }
     }
 
     fn list_task_logic() {
@@ -123,30 +136,16 @@ impl TaskTracker for PlainTextTaskTracker {
         let file = OpenOptions::new().read(true).open(&self.file_path)?;
         let reader = BufReader::new(file);
         let mut tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
-        if let Some((_, delete_idx)) = tasks
-            .iter()
-            .scan((None, None), |(incomplete_idx, total_idx), task| {
-                *total_idx = (*total_idx).map(|idx| idx + 1).or(Some(0));
-                if !task.complete {
-                    *incomplete_idx = (*incomplete_idx).map(|idx| idx + 1).or(Some(0));
-                }
-                Some((*incomplete_idx, *total_idx))
-            })
-            .flat_map(|(incomplete_idx, total_idx)| Some((incomplete_idx?, total_idx?)))
-            .find(|(incomplete_idx, _)| *incomplete_idx == id)
-        {
-            _ = tasks.remove(delete_idx);
+        PlainTextTaskTracker::delete_task_logic(&mut tasks, id);
 
-            let file = OpenOptions::new()
-                .write(true)
-                .truncate(true)
-                .open(&self.file_path)?;
-            let mut writer = BufWriter::new(file);
-            for task in tasks {
-                writeln!(writer, "{task}")?;
-            }
+        let file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(&self.file_path)?;
+        let mut writer = BufWriter::new(file);
+        for task in tasks {
+            writeln!(writer, "{task}")?;
         }
-
         Ok(())
     }
 
@@ -528,6 +527,79 @@ mod test {
         ];
         let id = 100;
         PlainTextTaskTracker::complete_task_logic(&mut tasks, id);
+
+        let expected_tasks = [
+            Task::new(
+                "Task 0".into(),
+                Some(vec!["ugh".into(), "project".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task::new(
+                "Task 1".into(),
+                None,
+                DateTime::parse_from_rfc3339("2025-03-18T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ];
+
+        assert_eq!(tasks, expected_tasks)
+    }
+
+    #[test]
+    fn plain_text_task_tracker_delete_task_id_exists() {
+        let mut tasks = vec![
+            Task::new(
+                "Task 0".into(),
+                Some(vec!["ugh".into(), "project".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task::new(
+                "Task 1".into(),
+                None,
+                DateTime::parse_from_rfc3339("2025-03-18T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ];
+        let id = 1;
+        PlainTextTaskTracker::delete_task_logic(&mut tasks, id);
+
+        let expected_tasks = [Task::new(
+            "Task 0".into(),
+            Some(vec!["ugh".into(), "project".into()]),
+            DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+        )];
+
+        assert_eq!(tasks, expected_tasks)
+    }
+
+    #[test]
+    fn plain_text_task_tracker_delete_task_id_does_not_exist() {
+        let mut tasks = vec![
+            Task::new(
+                "Task 0".into(),
+                Some(vec!["ugh".into(), "project".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task::new(
+                "Task 1".into(),
+                None,
+                DateTime::parse_from_rfc3339("2025-03-18T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ];
+        let id = 100;
+        PlainTextTaskTracker::delete_task_logic(&mut tasks, id);
 
         let expected_tasks = [
             Task::new(
