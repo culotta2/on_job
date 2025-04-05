@@ -300,6 +300,116 @@ mod test {
     }
 
     #[test]
+    fn plain_text_task_tracker_sorting_unique_deadlines() {
+        let data = br#"| Task 1 | project, ugh | false | 2025-03-01T22:00:00+00:00 |
+| Task 2 | project, ugh | false | 2025-03-02T13:01:00+00:00 |
+| Task 3 | project, ugh | false | 2025-03-02T13:00:00+00:00 |
+| Task 4 | project, ugh | false | 2025-01-10T16:00:00+00:00 |
+| Task 5 | project, ugh | true | 2025-02-20T03:00:00+00:00 |"#;
+        let reader = BufReader::new(Cursor::new(data));
+        let actual_tasks = PlainTextTaskTracker::read_tasks_from_file(reader);
+        assert!(actual_tasks.is_ok());
+        let expected_tasks = vec![
+            Task {
+                name: "Task 4".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: false,
+                deadline: DateTime::parse_from_rfc3339("2025-01-10T16:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+            Task {
+                name: "Task 5".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: true,
+                deadline: DateTime::parse_from_rfc3339("2025-02-20T03:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+            Task {
+                name: "Task 1".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: false,
+                deadline: DateTime::parse_from_rfc3339("2025-03-01T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+            Task {
+                name: "Task 3".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: false,
+                deadline: DateTime::parse_from_rfc3339("2025-03-02T13:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+            Task {
+                name: "Task 2".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: false,
+                deadline: DateTime::parse_from_rfc3339("2025-03-02T13:01:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+        ];
+        assert_eq!(expected_tasks, actual_tasks.unwrap());
+    }
+
+    #[test]
+    fn plain_text_task_tracker_sorting_non_unique_deadlines() {
+        let data = br#"| Task 1 | project, ugh | false | 2025-03-01T22:00:00+00:00 |
+| Task 2 | project, ugh | false | 2025-03-02T13:00:00+00:00 |
+| Task 3 | project, ugh | false | 2025-03-02T13:00:00+00:00 |
+| Task 4 | project, ugh | false | 2025-03-01T22:00:00+00:00 |
+| Task 5 | project, ugh | true | 2025-02-20T03:00:00+00:00 |"#;
+        let reader = BufReader::new(Cursor::new(data));
+        let actual_tasks = PlainTextTaskTracker::read_tasks_from_file(reader);
+        assert!(actual_tasks.is_ok());
+        let expected_tasks = vec![
+            Task {
+                name: "Task 5".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: true,
+                deadline: DateTime::parse_from_rfc3339("2025-02-20T03:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+            Task {
+                name: "Task 1".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: false,
+                deadline: DateTime::parse_from_rfc3339("2025-03-01T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+            Task {
+                name: "Task 4".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: false,
+                deadline: DateTime::parse_from_rfc3339("2025-03-01T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+            Task {
+                name: "Task 2".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: false,
+                deadline: DateTime::parse_from_rfc3339("2025-03-02T13:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+            Task {
+                name: "Task 3".into(),
+                tags: Some(vec!["project".into(), "ugh".into()]),
+                complete: false,
+                deadline: DateTime::parse_from_rfc3339("2025-03-02T13:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            },
+        ];
+        assert_eq!(expected_tasks, actual_tasks.unwrap());
+    }
+
+    #[test]
     fn plain_text_task_tracker_add_task_to_empty_file() {
         let data = b"";
         let mut cursor = Cursor::new(data.to_vec());
