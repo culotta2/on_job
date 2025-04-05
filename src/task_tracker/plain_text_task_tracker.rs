@@ -8,15 +8,17 @@ use std::error::Error;
 use std::fmt::Display;
 use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::path::Path;
+use std::path::PathBuf;
 
-pub struct PlainTextTaskTracker<'a> {
-    file_path: &'a Path,
+pub struct PlainTextTaskTracker {
+    file_path: PathBuf,
 }
 
-impl<'a> PlainTextTaskTracker<'a> {
-    pub fn new(file_path: &'a Path) -> Self {
-        PlainTextTaskTracker { file_path }
+impl PlainTextTaskTracker {
+    pub fn new(file_path: impl Into<PathBuf>) -> Self {
+        PlainTextTaskTracker {
+            file_path: file_path.into(),
+        }
     }
 
     fn read_tasks_from_file<B: BufRead>(reader: B) -> Result<Vec<Task>, ParseTaskError> {
@@ -27,6 +29,11 @@ impl<'a> PlainTextTaskTracker<'a> {
             .collect::<Result<Vec<Task>, ParseTaskError>>()?;
         tasks.sort_by(|task_a, task_b| task_a.deadline.cmp(&task_b.deadline));
         Ok(tasks)
+    }
+
+    fn add_task_logic<W: Write>(writer: &mut W, task: Task) -> Result<(), std::io::Error> {
+        writeln!(writer, "{task}")?;
+        Ok(())
     }
 }
 
@@ -59,7 +66,7 @@ impl From<ParseTaskError> for PlainTextTaskTrackerError {
 
 impl Error for PlainTextTaskTrackerError {}
 
-impl TaskTracker for PlainTextTaskTracker<'_> {
+impl TaskTracker for PlainTextTaskTracker {
     type Err = PlainTextTaskTrackerError;
 
     fn add_task(
@@ -72,14 +79,14 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         let file = OpenOptions::new()
             .append(true)
             .create(true)
-            .open(self.file_path)?;
+            .open(&self.file_path)?;
         let mut writer = BufWriter::new(file);
-        writeln!(writer, "{task}")?;
+        PlainTextTaskTracker::add_task_logic(&mut writer, task)?;
         Ok(())
     }
 
     fn complete_task(&mut self, id: usize) -> Result<(), Self::Err> {
-        let file = OpenOptions::new().read(true).open(self.file_path)?;
+        let file = OpenOptions::new().read(true).open(&self.file_path)?;
         let reader = BufReader::new(file);
         let mut tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
         tasks
@@ -92,7 +99,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         let file = OpenOptions::new()
             .write(true)
             .truncate(true)
-            .open(self.file_path)?;
+            .open(&self.file_path)?;
         let mut writer = BufWriter::new(file);
         for task in tasks {
             writeln!(writer, "{task}")?;
@@ -101,7 +108,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
     }
 
     fn delete_task(&mut self, id: usize) -> Result<(), Self::Err> {
-        let file = OpenOptions::new().read(true).open(self.file_path)?;
+        let file = OpenOptions::new().read(true).open(&self.file_path)?;
         let reader = BufReader::new(file);
         let mut tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
         if let Some((_, delete_idx)) = tasks
@@ -121,7 +128,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
             let file = OpenOptions::new()
                 .write(true)
                 .truncate(true)
-                .open(self.file_path)?;
+                .open(&self.file_path)?;
             let mut writer = BufWriter::new(file);
             for task in tasks {
                 writeln!(writer, "{task}")?;
@@ -137,7 +144,7 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         overdue: bool,
         tags: Option<Vec<String>>,
     ) -> Result<(), Self::Err> {
-        let file = OpenOptions::new().read(true).open(self.file_path)?;
+        let file = OpenOptions::new().read(true).open(&self.file_path)?;
         let reader = BufReader::new(file);
         let tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
 
@@ -242,4 +249,54 @@ impl TaskTracker for PlainTextTaskTracker<'_> {
         }
         Ok(())
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use chrono::DateTime;
+    use std::io::Cursor;
+
+    #[test]
+    fn plain_text_task_tracker_parse_file_one_task() {
+        let data = "| Task 1 | ugh | false | 2025-03-17T22:00:00+00:00 |\n";
+        let reader = BufReader::new(Cursor::new(data.as_bytes()));
+        let actual_task = PlainTextTaskTracker::read_tasks_from_file(reader);
+        let expected_task = Ok(vec![Task {
+            name: "Task 1".into(),
+            tags: Some(vec!["ugh".into()]),
+            deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+            complete: false,
+        }]);
+        assert_eq!(expected_task, actual_task);
+    }
+
+    #[test]
+    fn plain_text_task_tracker_parse_file_multiple_tasks() {
+        let data = "| Task 1 | ugh | false | 2025-03-17T22:00:00+00:00 |\n| Task 2 | project, time | true | 2025-03-19T22:00:00+00:00 |";
+        let reader = BufReader::new(Cursor::new(data.as_bytes()));
+        let actual_task = PlainTextTaskTracker::read_tasks_from_file(reader);
+        let expected_task = Ok(vec![
+            Task {
+                name: "Task 1".into(),
+                tags: Some(vec!["ugh".into()]),
+                deadline: DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+                complete: false,
+            },
+            Task {
+                name: "Task 2".into(),
+                tags: Some(vec!["project".into(), "time".into()]),
+                deadline: DateTime::parse_from_rfc3339("2025-03-19T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+                complete: true,
+            },
+        ]);
+        assert_eq!(expected_task, actual_task);
+    }
+
 }
