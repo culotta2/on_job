@@ -299,4 +299,48 @@ mod test {
         assert_eq!(expected_task, actual_task);
     }
 
+    #[test]
+    fn plain_text_task_tracker_add_task_to_empty_file() {
+        let data = b"";
+        let mut cursor = Cursor::new(data.to_vec());
+
+        let new_task = Task::new(
+            "Task 3".into(),
+            Some(vec!["workin'".into()]),
+            DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+        );
+
+        let res = PlainTextTaskTracker::add_task_logic(&mut cursor, new_task);
+        assert!(res.is_ok());
+
+        let actual_output = cursor.get_ref();
+
+        let expected_output = b"| Task 3 | workin' | false | 2025-03-17T22:00:00+00:00 |\n";
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn plain_text_task_tracker_add_task_to_populated_file() {
+        let data = b"| Task 1 | ugh | false | 2025-03-17T22:00:00+00:00 |\n| Task 2 | project, time | true | 2025-03-19T22:00:00+00:00 |\n";
+        let mut cursor = Cursor::new(data.to_vec());
+        cursor.set_position(data.len() as u64);
+
+        let new_task = Task::new(
+            "Task 3".into(),
+            Some(vec!["workin'".into()]),
+            DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+        );
+
+        let res = PlainTextTaskTracker::add_task_logic(&mut cursor, new_task);
+        assert!(res.is_ok());
+
+        let actual_output = cursor.get_ref();
+
+        let expected_output = b"| Task 1 | ugh | false | 2025-03-17T22:00:00+00:00 |\n| Task 2 | project, time | true | 2025-03-19T22:00:00+00:00 |\n| Task 3 | workin' | false | 2025-03-17T22:00:00+00:00 |\n";
+        assert_eq!(actual_output, expected_output);
+    }
 }
