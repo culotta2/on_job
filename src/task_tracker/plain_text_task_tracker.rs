@@ -35,6 +35,23 @@ impl PlainTextTaskTracker {
         writeln!(writer, "{task}")?;
         Ok(())
     }
+
+    fn complete_task_logic(tasks: &mut [Task], id: usize) {
+        tasks
+            .iter_mut()
+            .filter(|task| !task.complete)
+            .enumerate()
+            .filter(|(idx, _)| *idx == id)
+            .for_each(|(_, task)| task.complete());
+    }
+
+    fn delete_task_logic() {
+        unimplemented!()
+    }
+
+    fn list_task_logic() {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug)]
@@ -89,12 +106,7 @@ impl TaskTracker for PlainTextTaskTracker {
         let file = OpenOptions::new().read(true).open(&self.file_path)?;
         let reader = BufReader::new(file);
         let mut tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
-        tasks
-            .iter_mut()
-            .filter(|task| !task.complete)
-            .enumerate()
-            .filter(|(idx, _)| *idx == id)
-            .for_each(|(_, task)| task.complete());
+        PlainTextTaskTracker::complete_task_logic(&mut tasks, id);
 
         let file = OpenOptions::new()
             .write(true)
@@ -452,5 +464,88 @@ mod test {
 
         let expected_output = b"| Task 1 | ugh | false | 2025-03-17T22:00:00+00:00 |\n| Task 2 | project, time | true | 2025-03-19T22:00:00+00:00 |\n| Task 3 | workin' | false | 2025-03-17T22:00:00+00:00 |\n";
         assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn plain_text_task_tracker_complete_task_id_exists() {
+        let mut tasks = vec![
+            Task::new(
+                "Task 0".into(),
+                Some(vec!["ugh".into(), "project".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task::new(
+                "Task 1".into(),
+                None,
+                DateTime::parse_from_rfc3339("2025-03-18T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ];
+        let id = 1;
+        PlainTextTaskTracker::complete_task_logic(&mut tasks, id);
+
+        let expected_tasks = [
+            Task::new(
+                "Task 0".into(),
+                Some(vec!["ugh".into(), "project".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task {
+                name: "Task 1".into(),
+                tags: None,
+                deadline: DateTime::parse_from_rfc3339("2025-03-18T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+                complete: true,
+            },
+        ];
+
+        assert_eq!(tasks, expected_tasks)
+    }
+
+    #[test]
+    fn plain_text_task_tracker_complete_task_id_does_not_exist() {
+        let mut tasks = vec![
+            Task::new(
+                "Task 0".into(),
+                Some(vec!["ugh".into(), "project".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task::new(
+                "Task 1".into(),
+                None,
+                DateTime::parse_from_rfc3339("2025-03-18T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ];
+        let id = 100;
+        PlainTextTaskTracker::complete_task_logic(&mut tasks, id);
+
+        let expected_tasks = [
+            Task::new(
+                "Task 0".into(),
+                Some(vec!["ugh".into(), "project".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task::new(
+                "Task 1".into(),
+                None,
+                DateTime::parse_from_rfc3339("2025-03-18T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ];
+
+        assert_eq!(tasks, expected_tasks)
     }
 }
