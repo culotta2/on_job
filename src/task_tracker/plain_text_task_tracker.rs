@@ -68,10 +68,6 @@ impl PlainTextTaskTracker {
             _ = tasks.remove(delete_idx);
         }
     }
-
-    fn list_task_logic() {
-        unimplemented!()
-    }
 }
 
 #[derive(Debug)]
