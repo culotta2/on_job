@@ -31,6 +31,13 @@ impl PlainTextTaskTracker {
         Ok(tasks)
     }
 
+    fn write_tasks_to_file<W: Write>(writer: &mut W, tasks: &[Task]) -> Result<(), std::io::Error> {
+        for task in tasks {
+            writeln!(writer, "{task}")?
+        }
+        Ok(())
+    }
+
     fn add_task_logic<W: Write>(writer: &mut W, task: Task) -> Result<(), std::io::Error> {
         writeln!(writer, "{task}")?;
         Ok(())
@@ -418,6 +425,69 @@ mod test {
             },
         ];
         assert_eq!(expected_tasks, actual_tasks.unwrap());
+    }
+
+    #[test]
+    fn plain_text_task_tracker_write_single_task() {
+        let data = b"";
+        let mut cursor = Cursor::new(data.to_vec());
+
+        let new_task = Task::new(
+            "Task 3".into(),
+            Some(vec!["workin'".into()]),
+            DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                .unwrap()
+                .to_utc(),
+        );
+
+        let res = PlainTextTaskTracker::write_tasks_to_file(&mut cursor, &[new_task]);
+        assert!(res.is_ok());
+
+        let actual_output = cursor.get_ref();
+
+        let expected_output = b"| Task 3 | workin' | false | 2025-03-17T22:00:00+00:00 |\n";
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn plain_text_task_tracker_write_multiple_tasks() {
+        let data = b"";
+        let mut cursor = Cursor::new(data.to_vec());
+
+        let tasks = [
+            Task::new(
+                "Task 1".into(),
+                None,
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task::new(
+                "Task 2".into(),
+                Some(vec!["sleepin'".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            Task::new(
+                "Task 3".into(),
+                Some(vec!["workin'".into()]),
+                DateTime::parse_from_rfc3339("2025-03-17T22:00:00+00:00")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ];
+
+        let res = PlainTextTaskTracker::write_tasks_to_file(&mut cursor, &tasks);
+        assert!(res.is_ok());
+
+        let actual_output = cursor.get_ref();
+
+        let expected_output = br#"| Task 1 |  | false | 2025-03-17T22:00:00+00:00 |
+| Task 2 | sleepin' | false | 2025-03-17T22:00:00+00:00 |
+| Task 3 | workin' | false | 2025-03-17T22:00:00+00:00 |
+"#;
+        assert_eq!(actual_output, expected_output);
     }
 
     #[test]
