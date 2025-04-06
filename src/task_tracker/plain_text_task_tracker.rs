@@ -133,9 +133,8 @@ impl TaskTracker for PlainTextTaskTracker {
             .truncate(true)
             .open(&self.file_path)?;
         let mut writer = BufWriter::new(file);
-        for task in tasks {
-            writeln!(writer, "{task}")?;
-        }
+        PlainTextTaskTracker::write_tasks_to_file(&mut writer, &tasks)?;
+
         Ok(())
     }
 
@@ -150,9 +149,8 @@ impl TaskTracker for PlainTextTaskTracker {
             .truncate(true)
             .open(&self.file_path)?;
         let mut writer = BufWriter::new(file);
-        for task in tasks {
-            writeln!(writer, "{task}")?;
-        }
+        PlainTextTaskTracker::write_tasks_to_file(&mut writer, &tasks)?;
+
         Ok(())
     }
 
