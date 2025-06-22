@@ -1,3 +1,6 @@
+mod task_tracker;
+mod utils;
+
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Offset, TimeZone};
 use clap::Parser;
 use std::{
@@ -7,8 +10,6 @@ use std::{
     str::FromStr,
 };
 use task_tracker::TaskTracker;
-mod task_tracker;
-mod utils;
 
 #[derive(Debug, Parser)]
 #[command(

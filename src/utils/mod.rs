@@ -1,8 +1,25 @@
-use std::cmp::Ordering;
+pub enum TextEffect {
+    StrikeThrough,
+    Red,
+    Green,
+}
 
-pub fn right_pad(input: &str, length: usize, padding_char: char) -> String {
-    match input.len().cmp(&length) {
-        Ordering::Less => input.to_owned() + &padding_char.to_string().repeat(length - input.len()),
-        _ => input.into(),
+impl TextEffect {
+    pub fn ansi_code(&self) -> &str {
+        match *self {
+            TextEffect::StrikeThrough => "9",
+            TextEffect::Red => "31",
+            TextEffect::Green => "32",
+        }
     }
+}
+
+impl std::fmt::Display for TextEffect {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.ansi_code())
+    }
+}
+
+pub fn add_text_effect(text: &str, effect_str: TextEffect) -> String {
+    format!("\x1b[{}m{}\x1b[0m", effect_str, text)
 }
