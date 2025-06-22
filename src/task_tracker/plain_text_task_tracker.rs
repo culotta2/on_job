@@ -2,8 +2,7 @@ use chrono::{DateTime, Utc};
 
 use crate::task_tracker::TaskTracker;
 use crate::task_tracker::task::{ParseTaskError, Task};
-use crate::utils::right_pad;
-use std::collections::HashSet;
+use crate::utils::{TextEffect, add_text_effect};
 use std::error::Error;
 use std::fmt::Display;
 use std::fs::OpenOptions;
@@ -152,7 +151,7 @@ impl TaskTracker for PlainTextTaskTracker {
 
     fn list_task(
         &self,
-        all: bool,
+        incomplete: bool,
         overdue: bool,
         tags: Option<Vec<String>>,
     ) -> Result<(), Self::Err> {
@@ -160,105 +159,163 @@ impl TaskTracker for PlainTextTaskTracker {
         let reader = BufReader::new(file);
         let tasks = PlainTextTaskTracker::read_tasks_from_file(reader)?;
 
-        let tasks = match all {
+        let tasks = match incomplete {
             true => tasks,
             false => tasks.into_iter().filter(|task| !task.complete).collect(),
         };
 
-        let max_idx = tasks.len().to_string().len();
-        let (max_name, max_tags) = tasks
-            .iter()
-            .map(|task| {
-                (
-                    task.name.len(),
-                    task.tags.as_ref().map(|v| 2 * v.len() - 2).unwrap_or(0)
-                        + task
-                            .tags
-                            .as_ref()
-                            .map(|v| v.iter().map(|tag| tag.len()).sum())
-                            .unwrap_or(1),
-                )
-            })
-            .reduce(|(max_name_len, max_tags_len), (name_len, tags_len)| {
-                (
-                    std::cmp::max(max_name_len, name_len),
-                    std::cmp::max(max_tags_len, tags_len),
-                )
-            })
-            .unwrap_or((1, 1));
+        const COLUMN_PADDING: usize = 4;
+        const DEADLINE_LENGTH: usize = 16;
+        let max_id_length = (1 + tasks.len().ilog10() as usize).max(2);
+        let mut max_name_length = 2;
+        let mut max_tags_length = 4;
 
-        let id_padding = std::cmp::max(max_idx, 1);
-        let name_padding = std::cmp::max(max_name, 4);
-        let tags_padding = std::cmp::max(max_tags, 4);
-        const COMPLETE_PADDING: usize = 6;
-        const DEADLINE_PADDING: usize = 19;
+        for task in &tasks {
+            max_name_length = max_name_length.max(task.name.len());
+            max_tags_length =
+                max_tags_length.max(task.tags.as_deref().unwrap_or_default().join(", ").len());
+        }
 
-        let h_bar = "=".repeat(
-            id_padding
-                + name_padding
-                + tags_padding
-                + COMPLETE_PADDING
-                + DEADLINE_PADDING
-                + (2 * 7),
-        );
-
-        let id_field = right_pad("#", id_padding, ' ');
-        let name_field = right_pad("Name", name_padding, ' ');
-        let tags_field = right_pad("Tags", tags_padding, ' ');
-        let complete_field = "Done";
-        let deadline_field = right_pad("Due", DEADLINE_PADDING, ' ');
-
-        match all {
-            true => {
-                println!("| {name_field} | {tags_field} | {deadline_field} | {complete_field} |")
-            }
-            false => println!(
-                "| {id_field} | {name_field} | {tags_field} | {deadline_field} | {complete_field} |"
-            ),
-        };
-        println!("{h_bar}");
-        for (idx, task) in tasks
-            .iter()
-            .enumerate()
-            .filter(|(_, task)| match overdue {
-                true => (task.deadline <= Utc::now()) & !task.complete,
-                false => true,
-            })
-            .filter(|(_, task)| {
-                if let Some(tags) = &tags {
-                    task.tags
-                        .as_ref()
-                        .map(HashSet::from_iter)
-                        .unwrap_or(HashSet::new())
-                        .intersection(&HashSet::from_iter(tags))
-                        .count()
-                        > 0
-                } else {
-                    true
-                }
-            })
-        {
-            let id = right_pad(&idx.to_string(), id_padding, ' ');
-            let name = right_pad(&task.name, name_padding, ' ');
-            let tags = right_pad(
-                &task
-                    .tags
-                    .as_ref()
-                    .map(|t| t.join(", "))
-                    .unwrap_or(" ".into()),
-                tags_padding,
-                ' ',
+        if incomplete {
+            println!(
+                "Name{}Tags{}Due",
+                " ".repeat(max_name_length - "Name".len() + COLUMN_PADDING),
+                " ".repeat(max_tags_length - "Tags".len() + COLUMN_PADDING),
             );
-            let deadline = right_pad(&task.local_deadline(), DEADLINE_PADDING, ' ');
-            let complete = match task.complete {
-                true => "✓",
-                false => "",
-            };
-            match all {
-                true => println!("| {name} | {tags} | {deadline} | {complete:^4} |"),
-                false => println!("| {id} | {name} | {tags} | {deadline} | {complete:^4} |"),
+
+            println!(
+                "{}",
+                "-".repeat(
+                    max_name_length + max_tags_length + DEADLINE_LENGTH + (COLUMN_PADDING * 2)
+                )
+            );
+            for task in tasks.iter() {
+                if overdue && task.deadline.gt(&Utc::now()) {
+                    continue;
+                }
+                if let Some(tags) = &tags {
+                    if !tags
+                        .iter()
+                        .all(|tag| task.tags.as_deref().unwrap_or_default().contains(tag))
+                    {
+                        continue;
+                    }
+                }
+
+                let deadline_str = task.local_deadline();
+                let tags_display = task.tags.as_deref().unwrap_or_default().join(", ");
+                match (&task.complete, &task.deadline.lt(&Utc::now())) {
+                    (&true, _) => {
+                        println!(
+                            "{}{}{}{}{}",
+                            add_text_effect(
+                                &add_text_effect(&task.name, TextEffect::StrikeThrough),
+                                TextEffect::Green
+                            ),
+                            " ".repeat(max_name_length - task.name.len() + COLUMN_PADDING),
+                            add_text_effect(
+                                &add_text_effect(&tags_display, TextEffect::StrikeThrough),
+                                TextEffect::Green
+                            ),
+                            " ".repeat(max_tags_length - tags_display.len() + COLUMN_PADDING),
+                            add_text_effect(
+                                &add_text_effect(&deadline_str, TextEffect::StrikeThrough),
+                                TextEffect::Green
+                            )
+                        );
+                    }
+                    (&false, &true) => {
+                        println!(
+                            "{}{}{}{}{}",
+                            add_text_effect(&task.name, TextEffect::Red),
+                            " ".repeat(max_name_length - task.name.len() + COLUMN_PADDING),
+                            add_text_effect(&tags_display, TextEffect::Red),
+                            " ".repeat(max_tags_length - tags_display.len() + COLUMN_PADDING),
+                            add_text_effect(&deadline_str, TextEffect::Red)
+                        );
+                    }
+                    (&false, &false) => {
+                        println!(
+                            "{}{}{}{}{}",
+                            &task.name,
+                            " ".repeat(max_name_length - task.name.len() + COLUMN_PADDING),
+                            &tags_display,
+                            " ".repeat(max_tags_length - tags_display.len() + COLUMN_PADDING),
+                            &deadline_str,
+                        );
+                    }
+                }
+            }
+        } else {
+            println!(
+                "Id{}Name{}Tags{}Due",
+                " ".repeat(max_id_length - "Id".len() + COLUMN_PADDING),
+                " ".repeat(max_name_length - "Name".len() + COLUMN_PADDING),
+                " ".repeat(max_tags_length - "Tags".len() + COLUMN_PADDING),
+            );
+
+            println!(
+                "{}",
+                "-".repeat(
+                    max_name_length
+                        + max_tags_length
+                        + max_id_length
+                        + DEADLINE_LENGTH
+                        + (COLUMN_PADDING * 3)
+                )
+            );
+
+            for (id, task) in tasks.iter().enumerate() {
+                if overdue && task.deadline.gt(&Utc::now()) {
+                    continue;
+                }
+
+                if let Some(tags) = &tags {
+                    if !tags
+                        .iter()
+                        .all(|tag| task.tags.as_deref().unwrap_or_default().contains(tag))
+                    {
+                        continue;
+                    }
+                }
+
+                let deadline_str = task.local_deadline();
+                let tags_display = task.tags.as_deref().unwrap_or_default().join(", ");
+                match &task.deadline.lt(&Utc::now()) {
+                    true => {
+                        println!(
+                            "{}{}{}{}{}{}{}",
+                            add_text_effect(&id.to_string(), TextEffect::Red),
+                            " ".repeat(
+                                max_id_length - (id.checked_ilog10().unwrap_or(0) as usize + 1)
+                                    + COLUMN_PADDING
+                            ),
+                            add_text_effect(&task.name, TextEffect::Red),
+                            " ".repeat(max_name_length - task.name.len() + COLUMN_PADDING),
+                            add_text_effect(&tags_display, TextEffect::Red),
+                            " ".repeat(max_tags_length - tags_display.len() + COLUMN_PADDING),
+                            add_text_effect(&deadline_str, TextEffect::Red),
+                        );
+                    }
+                    false => {
+                        println!(
+                            "{}{}{}{}{}{}{}",
+                            &id.to_string(),
+                            " ".repeat(
+                                max_id_length - (id.checked_ilog10().unwrap_or(0) as usize + 1)
+                                    + COLUMN_PADDING
+                            ),
+                            &task.name,
+                            " ".repeat(max_name_length - task.name.len() + COLUMN_PADDING),
+                            &tags_display,
+                            " ".repeat(max_tags_length - tags_display.len() + COLUMN_PADDING),
+                            deadline_str
+                        );
+                    }
+                }
             }
         }
+
         Ok(())
     }
 }

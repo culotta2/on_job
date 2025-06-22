@@ -112,7 +112,7 @@ task having differing ids in different contexts
 Filters list to show tasks for which the deadline has passed
 
 - `-t --tags <TAG> [<TAG> ...]`
-Filters list to only show tasks with (one of) the passed tags
+Filters list to only show tasks with all of the specified tags
 
 ##### Examples
 
@@ -129,7 +129,7 @@ Shows all overdue tasks for Project 1
 ```bash
 on_job list -a -t "A" "B"
 ```
-Shows all tasks for projects A and B
+Shows all tasks with tags A and B
 
 ## Roadmap
 - [x] Add time (deadline) information to tasks

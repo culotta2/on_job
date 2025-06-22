@@ -30,7 +30,7 @@ impl Task {
     pub fn local_deadline(&self) -> String {
         self.deadline
             .with_timezone(&Local)
-            .format("%m/%d/%Y %H:%M:%S")
+            .format("%m/%d/%Y %H:%M")
             .to_string()
     }
 
