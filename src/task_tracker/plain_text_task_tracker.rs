@@ -166,8 +166,8 @@ impl TaskTracker for PlainTextTaskTracker {
 
         const COLUMN_PADDING: usize = 4;
         const DEADLINE_LENGTH: usize = 16;
-        let max_id_length = (1 + tasks.len().ilog10() as usize).max(2);
-        let mut max_name_length = 2;
+        let max_id_length = (1 + tasks.len().checked_ilog10().unwrap_or(1) as usize).max(2);
+        let mut max_name_length = 4;
         let mut max_tags_length = 4;
 
         for task in &tasks {
