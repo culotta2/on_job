@@ -14,7 +14,7 @@ use task_tracker::TaskTracker;
 #[derive(Debug, Parser)]
 #[command(
     author="Dominic Culotta",
-    version="0.3.3",
+    version="0.3.4",
     about="A todo CLI application",
     long_about = None
 )]
